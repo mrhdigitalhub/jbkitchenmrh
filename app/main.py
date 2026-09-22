@@ -134,7 +134,7 @@ def konversi_ke_default(bahan: dict, qty_input: float, satuan_input: str):
     return qty_input*faktor, faktor, ""
 
 def hitung_total_hpp(menu_id: str):
-    """SINGLE SOURCE OF TRUTH untuk HPP - dipakai add_resep, add_paket, delete_resep - CEK SYNC"""
+    """SINGLE SOURCE OF TRUTH - DIPISAH RUMUS: Resep vs Bahan Tambahan - CEK SYNC OPSI A FINAL"""
     if not supabase: return 0,10
     porsi=10
     try:
@@ -154,15 +154,18 @@ def hitung_total_hpp(menu_id: str):
     for r in res.data or []:
         qty=float(r.get("qty_need",0) or 0)
         si=r.get("satuan_input") or r.get("satuan") or "Kg"
-        # FIX: bahan_id prioritas (buah, air, box, bahan resep)
         if r.get("bahan_id"):
+            # PAKET BAHAN TAMBAHAN (box, beras, air, buah) - Qty = total paket, TIDAK dikali Porsi lagi
             bahan=r.get("bahan_inventory") or {}
             harga=float(bahan.get("harga_per_satuan",0) or 0)
             qty_conv,_,_=konversi_ke_default(bahan,qty,si)
-            total+=qty_conv*porsi*harga
+            total+=qty_conv*harga
         elif r.get("paket_menu_id"):
+            # PAKET RESEP (Telur Balado dll) - Qty 1 batch per porsi, Total = Qty x Porsi
             hpp_p=float((r.get("menu_master") or {}).get("hpp",0) or 0)
-            total+=qty*porsi*hpp_p
+            qty_fixed = qty
+            if qty_fixed > 10: qty_fixed = 1.0
+            total+=qty_fixed*porsi*hpp_p
     return total, porsi
 
 # === KAMUS SUPABASE - BUKAN LOCALSTORAGE - CEK SYNC DENGAN MASTER_MENU ===
@@ -387,7 +390,9 @@ async def get_resep(menu_id: str):
                 bahan=r.get("bahan_inventory") or {}
                 harga=float(bahan.get("harga_per_satuan",0) or bahan.get("harga_awal",0) or 0)
                 qty_conv,faktor,_=konversi_ke_default(bahan,qty,si)
-                total_qty=qty_conv*porsi; sub=total_qty*harga; hpp_total+=sub
+                # PAKET BAHAN TAMBAHAN: Qty = total paket (tidak dikali porsi), Subtotal = Qty x Harga Satuan
+                total_qty=qty_conv; sub=total_qty*harga; hpp_total+=sub
+                sub_per_porsi = sub / max(porsi,1)
                 kode_sub=bahan.get("kode_kategori",""); kode_full=bahan.get("kode_bahan","")
                 no=kode_full.split('-')[-1] if '-' in kode_full else ''
                 kode_rapi=f"{kode_sub}-{no} → {bahan.get('nama_bahan','').title()} → Rp {harga:,.0f} → {bahan.get('satuan_default','Kg')}"
@@ -395,18 +400,15 @@ async def get_resep(menu_id: str):
                 if harga==0: warns.append("HARGA 0! Update di Inventory")
                 if float(bahan.get("stock_qty",0) or 0)==0: warns.append("STOCK 0!")
                 if faktor!=1.0: warns.append(f"Konversi {si}→{bahan.get('satuan_default','Kg')} x{faktor}")
-                # tipe asli untuk display: jika parent paket masakan -> paket_bahan, else resep
                 tipe_display=r.get("tipe","resep")
                 if tipe_display=="paket":
                     tipe_display="paket_bahan"
-                items.append({"id":r["id"],"tipe":tipe_display,"bahan_id":r.get("bahan_id"),"kode_bahan":kode_rapi,"kode_bahan_raw":kode_full,"sub_kode":kode_sub,"no_urut":no,"nama_bahan":' '.join([w.capitalize() for w in str(bahan.get("nama_bahan","")).split()]),"satuan":bahan.get("satuan_default","Kg"),"satuan_input":si,"harga":harga,"qty_need":qty,"qty_converted":qty_conv,"faktor":faktor,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":qty_conv*harga,"stock_qty":float(bahan.get("stock_qty",0) or 0),"warning":" | ".join(warns),"is_harga_0":harga==0,"is_stock_0":float(bahan.get("stock_qty",0) or 0)==0})
+                items.append({"id":r["id"],"tipe":tipe_display,"bahan_id":r.get("bahan_id"),"kode_bahan":kode_rapi,"kode_bahan_raw":kode_full,"sub_kode":kode_sub,"no_urut":no,"nama_bahan":' '.join([w.capitalize() for w in str(bahan.get("nama_bahan","")).split()]),"satuan":bahan.get("satuan_default","Kg"),"satuan_input":si,"harga":harga,"qty_need":qty,"qty_converted":qty_conv,"faktor":faktor,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":sub_per_porsi,"stock_qty":float(bahan.get("stock_qty",0) or 0),"warning":" | ".join(warns),"is_harga_0":harga==0,"is_stock_0":float(bahan.get("stock_qty",0) or 0)==0})
             elif r.get("paket_menu_id"):
                 paket=r.get("menu_master") or {}
                 hpp_p=float(paket.get("hpp",0) or 0)
-                # OPSI A: Qty paket resep selalu 1 batch per porsi paket, satuan batch (bukan Kg)
-                # Koreksi data lama yang 15 Kg seperti screenshot -> jadi 1 batch
                 qty_fixed = qty
-                if qty_fixed > 10:  # data lama 15 Kg salah input -> koreksi Opsi A
+                if qty_fixed > 10:
                     qty_fixed = 1.0
                 total_qty=qty_fixed*porsi; sub=total_qty*hpp_p; hpp_total+=sub
                 items.append({"id":r["id"],"tipe":"paket","bahan_id":r.get("paket_menu_id"),"kode_bahan":paket.get("kode_menu",""),"nama_bahan":paket.get("nama_menu",""),"satuan":"batch","satuan_input":"batch","harga":hpp_p,"qty_need":qty_fixed,"qty_converted":qty_fixed,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":qty_fixed*hpp_p,"stock_qty":0,"warning":""})
