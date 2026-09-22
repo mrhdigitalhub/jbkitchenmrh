@@ -54,6 +54,8 @@
 <script>
 const MENU_ID="{{menu.id}}";
 let currentPorsi=10;
+let IS_ADDING=false;
+let BOM_CACHE=null;
 function fmtQty(v){let s=Number(v).toFixed(3);s=s.replace(/\.?0+$/,'');return s||'0';}
 function fmtRp(v){return 'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID');}
 function filterBahan(){
@@ -67,28 +69,36 @@ function onBahanChange(){
   const preview=document.getElementById('preview'); preview.classList.remove('hidden');
   preview.innerHTML=`${opt.dataset.sub||''}-${opt.dataset.no||''} → ${opt.dataset.namaori||''} → ${fmtRp(opt.dataset.harga)} → ${opt.dataset.satuan||''} | Stock ${opt.dataset.stock||''}`;
 }
-async function loadBOM(){
-  document.getElementById('bomBody').innerHTML='<tr><td colspan="7" class="p-3 text-center">Loading...</td></tr>';
+function renderBOM(data){
+  const tbody=document.getElementById('bomBody'); let total=0; let html='';
+  const items=(data.items||[]).filter(it=>!it.paket_menu_id);
+  if(items.length===0){ html='<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada bahan - ketik bawang, beras, ayam di atas</td></tr>'; }
+  else{
+    items.forEach(item=>{
+      const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const totalQty=parseFloat(item.total_qty||qtyConv*10); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
+      html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
+    });
+  }
+  tbody.innerHTML=html; document.getElementById('totalBahan').textContent=fmtRp(total);
+  const calc=data.hpp_calc; if(calc){ document.getElementById('hppBahan').textContent=fmtRp(calc.hpp_bahan_per_porsi); document.getElementById('hppOH').textContent=fmtRp(calc.oh_cost); document.getElementById('hppDel').textContent=fmtRp(calc.delivery_cost); document.getElementById('hppMP').textContent=fmtRp(calc.manpower_per_porsi); document.getElementById('hppFinal').textContent=fmtRp(calc.hpp_final_per_porsi); document.getElementById('hppFinalHeader').textContent=fmtRp(calc.hpp_final_per_porsi); }
+  BOM_CACHE=data;
+}
+async function loadBOM(force=false){
+  if(BOM_CACHE && !force){ renderBOM(BOM_CACHE); return; }
+  document.getElementById('bomBody').innerHTML='<tr><td colspan="7" class="p-3 text-center text-gray-500">⏳ Loading...</td></tr>';
   try{
-    const res=await fetch(`/api/menu/${MENU_ID}/resep`); const data=await res.json();
-    const tbody=document.getElementById('bomBody'); let total=0; let html='';
-    const items=(data.items||[]).filter(it=>!it.paket_menu_id);
-    if(items.length===0){ html='<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada bahan - ketik bawang, beras, ayam di atas</td></tr>'; }
-    else{
-      items.forEach(item=>{
-        const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const totalQty=parseFloat(item.total_qty||qtyConv*10); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
-        html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
-      });
-    }
-    tbody.innerHTML=html; document.getElementById('totalBahan').textContent=fmtRp(total);
-    const calc=data.hpp_calc; if(calc){ document.getElementById('hppBahan').textContent=fmtRp(calc.hpp_bahan_per_porsi); document.getElementById('hppOH').textContent=fmtRp(calc.oh_cost); document.getElementById('hppDel').textContent=fmtRp(calc.delivery_cost); document.getElementById('hppMP').textContent=fmtRp(calc.manpower_per_porsi); document.getElementById('hppFinal').textContent=fmtRp(calc.hpp_final_per_porsi); document.getElementById('hppFinalHeader').textContent=fmtRp(calc.hpp_final_per_porsi); }
+    const res=await fetch(`/api/menu/${MENU_ID}/resep`,{cache:'no-store'}); const data=await res.json();
+    renderBOM(data);
   }catch(e){ document.getElementById('bomBody').innerHTML=`<tr><td colspan="7" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`; }
 }
 async function addBahan(){
+  if(IS_ADDING) return;
   const sel=document.getElementById('bahanSelect'); const bahanId=sel.value; const qty=parseFloat(document.getElementById('qtyInput').value)||0; const satuan=document.getElementById('satuanInput').value||'Kg';
   if(!bahanId){alert('Pilih bahan dulu');return;} if(!qty||qty<=0){alert('Isi Qty 1 porsi');return;}
-  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bahan_id:bahanId,qty_need:qty,satuan_input:satuan,tipe:'resep'})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} document.getElementById('qtyInput').value=''; sel.selectedIndex=0; document.getElementById('preview').classList.add('hidden'); await loadBOM(); }catch(e){alert(e.message);} }
-async function deleteBOM(id){ if(!confirm('Hapus bahan?')) return; await fetch(`/api/resep/${id}`,{method:'DELETE'}); await loadBOM(); }
-loadBOM();
+  IS_ADDING=true; const btn=document.querySelector('button[onclick="addBahan()"]'); if(btn){btn.disabled=true; btn.textContent='⏳ Menambahkan...';}
+  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bahan_id:bahanId,qty_need:qty,satuan_input:satuan,tipe:'resep'})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} if(d.dedup){alert('Bahan sudah ada - skip double');} document.getElementById('qtyInput').value=''; sel.selectedIndex=0; document.getElementById('preview').classList.add('hidden'); BOM_CACHE=null; await loadBOM(true); }catch(e){alert(e.message);} finally{IS_ADDING=false; if(btn){btn.disabled=false; btn.textContent='+ Tambah';}}
+}
+async function deleteBOM(id){ if(!confirm('Hapus bahan?')) return; if(IS_ADDING) return; IS_ADDING=true; try{await fetch(`/api/resep/${id}`,{method:'DELETE'}); BOM_CACHE=null; await loadBOM(true);}finally{IS_ADDING=false;} }
+loadBOM(true);
 </script>
 </body></html>

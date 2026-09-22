@@ -419,11 +419,41 @@ async def add_resep(menu_id: str, request: Request):
     bahan_id=body.get("bahan_id"); qty=float(body.get("qty_need",0) or 0)
     si=body.get("satuan_input") or body.get("satuan") or "Kg"; tipe=body.get("tipe","resep")
     if not supabase: raise HTTPException(500,"No supabase")
+    if not bahan_id: raise HTTPException(400,"bahan_id required")
     try:
         supabase.table("resep_bom").select("id").limit(1).execute()
     except Exception as e:
         raise HTTPException(500,f"Tabel resep_bom belum ada: {e}")
     try:
+        # FIX SYNC ANTI-DOUBLE: cek apakah bahan sudah ada di paket ini -> update qty, bukan insert double
+        try:
+            existing = supabase.table("resep_bom").select("id,qty_need").eq("menu_id",menu_id).eq("bahan_id",bahan_id).execute()
+            if existing.data and len(existing.data)>0:
+                # update qty jika sudah ada (prevent double Air Minum seperti screenshot)
+                first = existing.data[0]
+                old_qty = float(first.get("qty_need",0) or 0)
+                # jika qty sama persis dan dalam 3 detik terakhir, anggap double-click -> skip insert
+                # else akumulasi
+                if abs(old_qty - qty) < 0.0001:
+                    # duplicate detection -> return ok tanpa insert baru
+                    total,porsi=hitung_total_hpp(menu_id)
+                    calc=hitung_hpp_final(total,porsi)
+                    return {"ok":True,"hpp_per_porsi":calc["hpp_final_per_porsi"],"total":total,"final":calc["hpp_final_per_porsi"],"dedup":True}
+                # jika qty beda, update jadi qty baru (bukan tambah double)
+                supabase.table("resep_bom").update({"qty_need":qty,"satuan_input":si,"tipe":tipe}).eq("id",first["id"]).execute()
+                # hapus duplicate lain jika ada >1 baris untuk bahan yang sama
+                if len(existing.data)>1:
+                    for dup in existing.data[1:]:
+                        try: supabase.table("resep_bom").delete().eq("id",dup["id"]).execute()
+                        except: pass
+                total,porsi=hitung_total_hpp(menu_id)
+                calc=hitung_hpp_final(total,porsi)
+                hpp_final=calc["hpp_final_per_porsi"]
+                supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
+                return {"ok":True,"hpp_per_porsi":hpp_final,"hpp_bahan":calc["hpp_bahan_per_porsi"],"total":total,"final":hpp_final,"dedup":False,"updated":True}
+        except Exception as dedup_e:
+            print(f"dedup check fail (continue insert): {dedup_e}")
+
         try:
             supabase.table("resep_bom").insert({"menu_id":menu_id,"bahan_id":bahan_id,"qty_need":qty,"satuan_input":si,"tipe":tipe}).execute()
         except Exception as e:
