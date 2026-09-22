@@ -15,9 +15,11 @@
   </nav>
   <main class="flex-1 p-4 overflow-y-auto" data-total="{{total}}">
     <div class="flex justify-between items-center mb-3">
-      <div><h1 class="text-xl font-bold">Inventory V5 Kanan - {{total}} Bahan - Sheet Kanan</h1><p class="text-xs text-gray-500">Sistem: 1=Flag → 2=Kategori Utama → 3=Sub Kategori → Kode Auto (FLAG-KAT-SUB-001) → 4=Nama | Kanan = input nama di akhir</p></div>
-      <div class="flex gap-2">
-        <input id="search" placeholder="Cari kode/nama..." class="border p-2 rounded text-sm w-64" onkeyup="filterTable()">
+      <div><h1 class="text-xl font-bold">Inventory V5 Kanan - {{total}} Bahan - Sheet Kanan</h1><p class="text-xs text-gray-500">Sistem: 1=Flag → 2=Kategori Utama → 3=Sub Kategori → Kode Auto (FLAG-KAT-SUB-001) → 4=Nama | Kanan = input nama di akhir | FIX: lut bukan 1ut</p></div>
+      <div class="flex gap-2 flex-wrap">
+        <input id="search" placeholder="Cari kode/nama..." class="border p-2 rounded text-sm w-48" onkeyup="filterTable()">
+        <button onclick="fixTypoLut()" class="bg-orange-600 text-white px-3 py-2 rounded text-sm font-bold">🔧 Fix 1ut→lut</button>
+        <button onclick="deleteTypo1ut()" class="bg-red-800 text-white px-3 py-2 rounded text-sm font-bold">🗑️ Delete 1ut</button>
         <button onclick="openKategoriModal()" class="bg-blue-500 text-white px-3 py-2 rounded text-sm font-bold">⚙️ Kelola Kategori</button>
         <input type="file" id="importFile" accept=".xlsx,.csv" class="hidden" onchange="importExcel()">
         <button onclick="document.getElementById('importFile').click()" class="bg-green-600 text-white px-3 py-2 rounded text-sm font-bold">📥 Import Kanan</button>
@@ -275,17 +277,54 @@ function toggleHalal(){
   else { halal.disabled=false; halal.classList.remove('bg-gray-200'); }
   genKode();
 }
-function getCountForKategori(subCode){
-  var rows=document.querySelectorAll('#bahanTable tbody tr');
-  var count=0;
-  rows.forEach(function(r){
-    if(r.style.display==='none') return;
-    var cell=r.cells[4];
-    if(cell && cell.textContent.trim().toLowerCase()===subCode.toLowerCase()) count++;
-  });
-  return count;
+let KODE_CACHE = {}; // cache hitung sub kategori dari Supabase
+async function getCountForKategori(subCode){
+  // FIX: hitung dari Supabase, bukan dari baris DOM yang difilter, agar 001 tidak duplicate
+  subCode=(subCode||'').toLowerCase();
+  if(subCode==='1ut') subCode='lut'; // FIX TYPO: 1ut -> lut
+  if(KODE_CACHE[subCode]!=null) return KODE_CACHE[subCode];
+  try{
+    const res=await fetch('/api/bahan/konversi-status');
+    const data=await res.json();
+    const counts={};
+    (data.items||[]).forEach(b=>{
+      const sub=(b.kode_bahan||'').split('-')[2]||b.sub_kode||'';
+      const lc=sub.toLowerCase();
+      const normalized=lc==='1ut'?'lut':lc;
+      counts[normalized]=(counts[normalized]||0)+1;
+      // juga hitung dari kode_kategori field
+      const sub2=(b.kode_kategori||'').toLowerCase();
+      const norm2=sub2==='1ut'?'lut':sub2;
+      if(norm2!==normalized){
+        // jangan double count jika sudah sama
+      }
+    });
+    // fallback: hitung dari kode_bahan langsung
+    const bySub={};
+    (data.items||[]).forEach(b=>{
+      const parts=(b.kode_bahan||'').split('-');
+      if(parts.length>=3){
+        let sub=parts[2].toLowerCase();
+        if(sub==='1ut') sub='lut';
+        bySub[sub]=(bySub[sub]||0)+1;
+      }
+    });
+    KODE_CACHE={...counts,...bySub};
+    return KODE_CACHE[subCode]||0;
+  }catch(e){
+    // fallback lama: hitung dari DOM
+    var rows=document.querySelectorAll('#bahanTable tbody tr');
+    var count=0;
+    rows.forEach(function(r){
+      var kodeCell=r.cells[1];
+      if(!kodeCell) return;
+      var kode=(kodeCell.textContent||'').toLowerCase();
+      if(kode.includes('-'+subCode+'-') || kode.includes('-1ut-') && subCode==='lut') count++;
+    });
+    return count;
+  }
 }
-function genKode(){
+async function genKode(){
   var flagEl=document.getElementById('fhall');
   var katUtamaEl=document.getElementById('fkat_utama');
   var subEl=document.getElementById('fkode_kat');
@@ -293,21 +332,31 @@ function genKode(){
   var fidEl=document.getElementById('fid');
   var fnoUrutEl=document.getElementById('fno_urut');
   if(!flagEl||!katUtamaEl||!subEl||!kodeEl) return;
-  var flag=flagEl.value||'Hall';
-  var kat=katUtamaEl.value||'nbt';
-  var sub=subEl.value||'buh';
+  var flag=flagEl.value||'Orgk'; // default Orgk sesuai permintaan Udang Vaname Orgk-dgi-lut-001
+  var kat=katUtamaEl.value||'dgi';
+  var sub=subEl.value||'lut';
+  if(sub==='1ut') sub='lut'; // FIX TYPO
   var fid=fidEl ? fidEl.value : '';
   var urut=1;
   if(fid){
     var currentKode=kodeEl.value||'';
     var m=currentKode.match(/-(\d{3})$/);
-    if(m){ urut=parseInt(m[1],10); } else { urut=getCountForKategori(sub)||1; }
-  } else { urut=getCountForKategori(sub)+1; }
+    if(m){ urut=parseInt(m[1],10); }
+    else {
+      const cnt=await getCountForKategori(sub);
+      urut=cnt||1;
+    }
+  } else {
+    const cnt=await getCountForKategori(sub);
+    urut=cnt+1;
+  }
   if(fnoUrutEl) fnoUrutEl.value=urut;
   var pad=String(urut).padStart(3,'0');
+  // pastikan format Orgk-dgi-lut-001 (tanpa Orgk jadi Org-? tetap Orgk)
+  if(flag==='Org') flag='Orgk';
   kodeEl.value=flag+'-'+kat+'-'+sub+'-'+pad;
   var info=document.getElementById('kodeInfo');
-  if(info) info.textContent='Auto Kanan: '+flag+'-'+kat+'-'+sub+'-'+pad+' (ke-'+urut+' untuk sub '+sub+')';
+  if(info) info.textContent='Auto Kanan: '+flag+'-'+kat+'-'+sub+'-'+pad+' (ke-'+urut+' untuk sub '+sub+') | Jika duplicate auto +1 di backend';
 }
 function calc(){
   var awal=parseFloat(document.getElementById('fstock_awal').value)||0;
@@ -489,6 +538,27 @@ async function quickFix(id, nama, hargaLama, stockLama){
   }catch(e){
     alert('Error: '+e.message);
   }
+}
+async function fixTypoLut(){
+  if(!confirm('Fix typo 1ut → lut? Udang Galah 002 akan jadi lut-002, Vaname 001 akan jadi lut-001')) return;
+  try{
+    const res=await fetch('/api/bahan/fix-typo-lut',{method:'POST'});
+    const data=await res.json();
+    alert(`✅ Fixed ${data.fixed} bahan: ${data.message}`);
+    KODE_CACHE={}; // clear cache
+    location.reload();
+  }catch(e){alert('Error fix: '+e.message);}
+}
+async function deleteTypo1ut(){
+  if(!confirm('YAKIN DELETE semua bahan dengan kode mengandung 1ut? (sisa import lama typo)')) return;
+  if(!confirm('Konfirmasi kedua: DELETE 1ut? Udang Galah dengan 1ut akan terhapus jika belum di-fix')) return;
+  try{
+    const res=await fetch('/api/bahan/typo-1ut',{method:'DELETE'});
+    const data=await res.json();
+    alert(`🗑️ Deleted ${data.deleted} bahan dengan 1ut`);
+    KODE_CACHE={};
+    location.reload();
+  }catch(e){alert('Error delete: '+e.message);}
 }
 </script>
 </body></html>

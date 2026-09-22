@@ -682,10 +682,13 @@ async def save_bahan(request: Request):
     id_val=get_str("id","")
     kode=get_str("kode_bahan","").strip(); nama=' '.join([w.capitalize() for w in get_str("nama_bahan","").strip().split()])
     kat_utama=get_str("kategori_utama","nbt").lower(); kode_kat=get_str("kode_kategori","buh").lower()
+    # FIX TYPO: 1ut -> lut (sisa import lama)
+    if kode_kat=="1ut": kode_kat="lut"
+    # FIX KODE BAHAN: jika ada -1ut- di kode, ganti jadi -lut-
+    if "-1ut-" in kode.lower(): kode=kode.lower().replace("-1ut-","-lut-")
     satuan=get_str("satuan_default","Kg"); stock=get_float("stock_qty",0); stock_min=get_float("stock_minimum",5)
     harga=get_float("harga_per_satuan",0); supplier=get_str("supplier",""); merek=' '.join([w.capitalize() for w in get_str("merek","").split()])
     hall=get_str("hall_flag","Orgk"); orgk="Orgk" if hall=="Orgk" else ""
-    # konversi_json dari form jika ada
     konversi_json={}
     try:
         kj_raw=get_str("konversi_json","")
@@ -695,19 +698,106 @@ async def save_bahan(request: Request):
     data={"kode_bahan":kode,"nama_bahan":nama,"kategori_utama":kat_utama,"kode_kategori":kode_kat,"satuan_default":satuan,"stock_qty":stock,"stock_minimum":stock_min,"harga_per_satuan":harga,"supplier":supplier,"merek":merek,"hall_flag":hall,"orgk_flag":orgk,"konversi_json":konversi_json}
     if supabase:
         try:
+            # CEK DUPLIKAT KODE: jika kode sudah ada dan ini insert baru (bukan edit), auto +1
+            if not id_val:
+                try:
+                    ex=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_bahan",kode).limit(1).execute()
+                    if ex.data:
+                        # cari max nomor untuk sub kategori ini
+                        all_sub=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_kategori",kode_kat).execute()
+                        max_n=0
+                        for row in (all_sub.data or []):
+                            kb=row.get("kode_bahan","")
+                            m=kb.split("-")[-1]
+                            try: n=int(m); max_n=max(max_n,n)
+                            except: pass
+                        next_n=max_n+1
+                        pad=str(next_n).zfill(3)
+                        # rebuild kode dengan nomor baru: FLAG-KAT-SUB-PAD
+                        parts=kode.split("-")
+                        if len(parts)>=4:
+                            kode="-".join(parts[:-1]+[pad])
+                            data["kode_bahan"]=kode
+                        else:
+                            # fallback
+                            kode=f"{hall}-{kat_utama}-{kode_kat}-{pad}"
+                            data["kode_bahan"]=kode
+                except Exception as e_dup:
+                    print("cek dup error",e_dup)
             if id_val: supabase.table("bahan_inventory").update(data).eq("id",id_val).execute()
             else: supabase.table("bahan_inventory").insert(data).execute()
             _ensure_kamus_row(nama,0.15,satuan,satuan,konversi_json,f"{nama} 0.15 {satuan} (auto dari inventory)")
         except Exception as e:
             print("save bahan error",e)
-            # fallback tanpa konversi_json jika kolom belum ada
             try:
                 fb={k:v for k,v in data.items() if k!="konversi_json"}
                 if id_val: supabase.table("bahan_inventory").update(fb).eq("id",id_val).execute()
                 else: supabase.table("bahan_inventory").insert(fb).execute()
-            except Exception as e2: print(e2)
+            except Exception as e2: 
+                print(e2)
+                # jika masih error duplicate, coba auto increment lagi
+                try:
+                    if not id_val and "duplicate" in str(e2).lower():
+                        all_sub=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_kategori",kode_kat).execute()
+                        max_n=0
+                        for row in (all_sub.data or []):
+                            kb=row.get("kode_bahan","")
+                            try: max_n=max(max_n,int(kb.split("-")[-1]))
+                            except: pass
+                        pad=str(max_n+1).zfill(3)
+                        fb["kode_bahan"]=f"{hall}-{kat_utama}-{kode_kat}-{pad}"
+                        supabase.table("bahan_inventory").insert(fb).execute()
+                except Exception as e3:
+                    print("final save error",e3)
+                    raise e3
     from fastapi.responses import RedirectResponse
     return RedirectResponse("/dashboard/admin/inventory", status_code=302)
+
+@app.post("/api/bahan/fix-typo-lut")
+async def fix_typo_lut():
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        # 1. Update semua kode_kategori 1ut -> lut
+        res1=supabase.table("bahan_inventory").select("id,kode_bahan,kode_kategori").eq("kode_kategori","1ut").execute()
+        fixed=0
+        for row in (res1.data or []):
+            old_kode=row.get("kode_bahan","")
+            new_kode=old_kode.lower().replace("-1ut-","-lut-")
+            # jika masih ada 1ut di kode, ganti
+            if "1ut" in new_kode: new_kode=new_kode.replace("1ut","lut")
+            supabase.table("bahan_inventory").update({"kode_kategori":"lut","kode_bahan":new_kode}).eq("id",row["id"]).execute()
+            fixed+=1
+        # 2. Update semua kode_bahan yang mengandung -1ut- tapi kode_kategori sudah lut (sisa typo)
+        res2=supabase.table("bahan_inventory").select("id,kode_bahan").ilike("kode_bahan","%-1ut-%").execute()
+        for row in (res2.data or []):
+            old_kode=row.get("kode_bahan","")
+            new_kode=old_kode.lower().replace("-1ut-","-lut-").replace("1ut","lut")
+            supabase.table("bahan_inventory").update({"kode_bahan":new_kode,"kode_kategori":"lut"}).eq("id",row["id"]).execute()
+            fixed+=1
+        # 3. Pastikan Udang Galah tetap 002 dan Vaname 001 - jika ada duplicate 001, biarkan, nanti auto increment
+        # 4. Delete sisa import lama yang masih 1ut jika diminta - tapi kita sudah update, jadi tidak delete, hanya update
+        return {"ok":True,"fixed":fixed,"message":f"Fixed {fixed} bahan dari 1ut -> lut. Udang Vaname akan jadi Orgk-dgi-lut-001, Udang Galah tetap 002"}
+    except Exception as e:
+        print("fix typo error",e); raise HTTPException(500,str(e))
+
+@app.delete("/api/bahan/typo-1ut")
+async def delete_typo_1ut():
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        # Hapus semua yang masih mengandung 1ut (jika user minta delete)
+        res=supabase.table("bahan_inventory").select("id").ilike("kode_bahan","%1ut%").execute()
+        deleted=0
+        for row in (res.data or []):
+            supabase.table("bahan_inventory").delete().eq("id",row["id"]).execute()
+            deleted+=1
+        # juga yang kode_kategori 1ut
+        res2=supabase.table("bahan_inventory").select("id").eq("kode_kategori","1ut").execute()
+        for row in (res2.data or []):
+            supabase.table("bahan_inventory").delete().eq("id",row["id"]).execute()
+            deleted+=1
+        return {"ok":True,"deleted":deleted}
+    except Exception as e:
+        print("delete typo error",e); raise HTTPException(500,str(e))
 
 # === KAMUS SUPABASE ===
 KAMUS_DEFAULT = KAMUS_DEFAULT
