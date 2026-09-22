@@ -42,7 +42,7 @@
 </div>
 <!-- TABEL BOM RESEP ONLY -->
 <div class="bg-white rounded border overflow-hidden">
-<table class="w-full text-[13px]"><thead class="bg-orange-100 text-[12px]"><tr class="text-left"><th class="p-2">Kode (sub-no → Nama → Harga → Sat)</th><th class="p-2">Nama Bahan</th><th class="p-2">Qty (1 porsi)</th><th class="p-2">Total Qty (qty×porsi)</th><th class="p-2">Harga</th><th class="p-2">Subtotal</th><th class="p-2">Action</th></tr></thead><tbody id="bomBody"><tr><td colspan="7" class="p-3 text-center">Loading...</td></tr></tbody></table>
+<table class="w-full text-[13px]"><thead class="bg-orange-100 text-[12px]"><tr class="text-left"><th class="p-2">Kode (sub-no → Nama → Harga → Sat)</th><th class="p-2">Nama Bahan</th><th class="p-2">Qty (1 porsi)</th><th class="p-2">Nilai Konversi (auto)</th><th class="p-2">Qty Konversi</th><th class="p-2">Total Qty (qty×porsi)</th><th class="p-2">Harga</th><th class="p-2">Subtotal</th><th class="p-2">Action</th></tr></thead><tbody id="bomBody"><tr><td colspan="9" class="p-3 text-center">Loading...</td></tr></tbody></table>
 </div>
 <div class="grid grid-cols-2 gap-4 mt-4">
 <div class="bg-orange-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">📊 HPP BAHAN BAKU</h4><div class="text-[12px] space-y-1"><div class="flex justify-between"><span>Total Bahan Baku (qty×porsi×harga):</span><span id="totalBahan" class="font-bold">Rp 0</span></div></div></div>
@@ -72,11 +72,11 @@ function onBahanChange(){
 function renderBOM(data){
   const tbody=document.getElementById('bomBody'); let total=0; let html='';
   const items=(data.items||[]).filter(it=>!it.paket_menu_id);
-  if(items.length===0){ html='<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada bahan - ketik bawang, beras, ayam di atas</td></tr>'; }
+  if(items.length===0){ html='<tr><td colspan="9" class="p-3 text-center text-gray-500">Belum ada bahan - ketik bawang, beras, ayam di atas</td></tr>'; }
   else{
     items.forEach(item=>{
-      const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const totalQty=parseFloat(item.total_qty||qtyConv*10); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
-      html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
+      const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const faktor=parseFloat(item.faktor||1); const totalQty=parseFloat(item.total_qty||qtyConv*10); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
+      const faktorDisplay=faktor==1?'<span class="bg-green-100 px-1 rounded text-[9px]">Tidak perlu</span>':`<span class="bg-orange-100 px-1 rounded text-[9px]">${fmtQty(faktor)}</span>`; html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 text-[10px]">${faktorDisplay}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qtyConv)} ${item.satuan||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
     });
   }
   tbody.innerHTML=html; document.getElementById('totalBahan').textContent=fmtRp(total);
@@ -85,11 +85,11 @@ function renderBOM(data){
 }
 async function loadBOM(force=false){
   if(BOM_CACHE && !force){ renderBOM(BOM_CACHE); return; }
-  document.getElementById('bomBody').innerHTML='<tr><td colspan="7" class="p-3 text-center text-gray-500">⏳ Loading...</td></tr>';
+  document.getElementById('bomBody').innerHTML='<tr><td colspan="9" class="p-3 text-center text-gray-500">⏳ Loading...</td></tr>';
   try{
     const res=await fetch(`/api/menu/${MENU_ID}/resep`,{cache:'no-store'}); const data=await res.json();
     renderBOM(data);
-  }catch(e){ document.getElementById('bomBody').innerHTML=`<tr><td colspan="7" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`; }
+  }catch(e){ document.getElementById('bomBody').innerHTML=`<tr><td colspan="9" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`; }
 }
 async function addBahan(){
   if(IS_ADDING) return;

@@ -542,13 +542,64 @@ async def update_porsi(menu_id: str, request: Request):
     try:
         supabase.table("menu_master").update({"porsi":porsi,"satuan":satuan}).eq("id",menu_id).execute()
         total,_=hitung_total_hpp(menu_id)
-        # hitung ulang dengan porsi baru
         calc=hitung_hpp_final(total,porsi)
         hpp_final=calc["hpp_final_per_porsi"]
         supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
         return {"ok":True,"porsi":porsi,"satuan":satuan,"hpp_final":hpp_final,"calc":calc}
     except Exception as e:
         print("update porsi error",e); raise HTTPException(500,str(e))
+
+# === KAMUS KONVERSI SYNC - CEK SYNC MASTER BAHAN KONVERSI ===
+@app.get("/api/kamus/list")
+async def list_kamus():
+    if not supabase: return {"items":[]}
+    try:
+        res=supabase.table("kamus_bom").select("*").order("nama_bahan").execute()
+        return {"items":res.data or []}
+    except Exception as e:
+        print("kamus list error",e)
+        return {"items":[]}
+
+@app.get("/api/bahan/konversi-status")
+async def bahan_konversi_status():
+    if not supabase: return {"items":[]}
+    try:
+        res=supabase.table("bahan_inventory").select("id,kode_bahan,nama_bahan,satuan_default,konversi_json,harga_per_satuan,stock_qty").order("nama_bahan").execute()
+        items=[]
+        for b in res.data or []:
+            kj=b.get("konversi_json") or {}
+            if isinstance(kj,str):
+                try:
+                    import json; kj=json.loads(kj)
+                except: kj={}
+            has=len(kj)>0
+            items.append({
+                "id":b["id"],"kode_bahan":b.get("kode_bahan"),"nama_bahan":b.get("nama_bahan"),
+                "satuan_default":b.get("satuan_default"),"konversi_json":kj,
+                "sudah_ada_konversi":has,"harga":b.get("harga_per_satuan"),"stock":b.get("stock_qty")
+            })
+        return {"items":items,"total":len(items),"sudah_ada":len([i for i in items if i["sudah_ada_konversi"]]),"belum_ada":len([i for i in items if not i["sudah_ada_konversi"]])}
+    except Exception as e:
+        print("konversi status error",e)
+        return {"items":[]}
+
+@app.post("/api/bahan/{bahan_id}/konversi")
+async def update_konversi(bahan_id: str, request: Request):
+    body=await request.json()
+    konversi=body.get("konversi_json") or {}
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        supabase.table("bahan_inventory").update({"konversi_json":konversi}).eq("id",bahan_id).execute()
+        # sync ke kamus_bom juga
+        try:
+            bres=supabase.table("bahan_inventory").select("nama_bahan,satuan_default").eq("id",bahan_id).single().execute()
+            if bres.data:
+                nama_low=bres.data.get("nama_bahan","").lower()
+                supabase.table("kamus_bom").upsert({"nama_bahan":nama_low,"konversi_json":konversi,"satuan_default":bres.data.get("satuan_default","Kg")}, on_conflict="nama_bahan").execute()
+        except: pass
+        return {"ok":True,"konversi":konversi}
+    except Exception as e:
+        print("update konversi error",e); raise HTTPException(500,str(e))
 
 @app.delete("/api/resep/{resep_id}")
 async def delete_resep(resep_id: str):
