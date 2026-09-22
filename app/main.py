@@ -530,6 +530,24 @@ async def add_resep_paket(menu_id: str, request: Request):
     except Exception as e:
         print("add paket error",e); raise HTTPException(500,f"Gagal tambah paket: {e}")
 
+@app.post("/api/menu/{menu_id}/porsi")
+async def update_porsi(menu_id: str, request: Request):
+    body=await request.json()
+    porsi=float(body.get("porsi",1) or 1)
+    if porsi<=0: porsi=1
+    satuan=body.get("satuan","porsi")
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        supabase.table("menu_master").update({"porsi":porsi,"satuan":satuan}).eq("id",menu_id).execute()
+        total,_=hitung_total_hpp(menu_id)
+        # hitung ulang dengan porsi baru
+        calc=hitung_hpp_final(total,porsi)
+        hpp_final=calc["hpp_final_per_porsi"]
+        supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
+        return {"ok":True,"porsi":porsi,"satuan":satuan,"hpp_final":hpp_final,"calc":calc}
+    except Exception as e:
+        print("update porsi error",e); raise HTTPException(500,str(e))
+
 @app.delete("/api/resep/{resep_id}")
 async def delete_resep(resep_id: str):
     if not supabase: raise HTTPException(500,"No supabase")
