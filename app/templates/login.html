@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script>
+<title>JB KITCHEN - Login</title>
+</head>
+<body class="bg-orange-50 min-h-screen flex items-center justify-center">
+<div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+  <h1 class="text-3xl font-bold text-orange-600">JB KITCHEN-MRH</h1>
+  <p class="text-gray-500 mb-6">Aplikasi Digital Jasa Boga - FREE 100%</p>
+  <form action="/login" method="post" class="space-y-4">
+    <input name="email" type="email" placeholder="Email" required class="w-full p-3 border rounded-xl">
+    <select name="role" class="w-full p-3 border rounded-xl">
+      <option value="admin">Admin - Full Akses</option>
+      <option value="owner">Owner - Live Data</option>
+      <option value="produksi">Produksi</option>
+      <option value="delivery">Delivery</option>
+    </select>
+    <button class="w-full bg-orange-600 text-white p-3 rounded-xl font-bold hover:bg-orange-700">Masuk</button>
+  </form>
+  <p class="text-xs text-gray-400 mt-4">Python + Supabase + Vercel • Dibuat untuk MRH DigitalHub</p>
+</div>
+</body>
+</html>

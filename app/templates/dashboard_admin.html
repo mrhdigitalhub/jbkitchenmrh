@@ -1,0 +1,99 @@
+<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script><title>JB KITCHEN ADMIN - LIVE</title></head>
+<body class="bg-gray-50">
+<div class="flex min-h-screen">
+  <nav class="w-64 bg-white shadow p-6 shrink-0 sticky top-0 h-screen overflow-y-auto">
+    <h2 class="font-bold text-xl text-orange-600">JB KITCHEN</h2>
+    <p class="text-xs text-gray-500 mb-6">Role: {{role}} - <span id="rtTotalBahanSide">{{stats.total_bahan}}</span> bahan - <span class="text-green-600">● LIVE</span></p>
+    <ul class="space-y-1 text-sm">
+      <a href="/dashboard/admin"><li class="bg-orange-100 p-3 rounded font-bold flex justify-between"><span>📊 Dashboard</span><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse inline-block"></span></li></a>
+      <a href="/dashboard/admin/inventory"><li class="p-3 hover:bg-gray-100 rounded flex justify-between"><span>📦 Inventory Stock</span><span class="bg-red-100 text-red-600 text-xs px-2 rounded" id="rtTotalBahan">{{stats.total_bahan}}</span></li></a>
+      <a href="/dashboard/admin/menu"><li class="p-3 hover:bg-gray-100 rounded flex justify-between bg-blue-50 border border-blue-200"><span>🍱 Master Menu & Resep</span><span class="bg-blue-100 text-blue-600 text-xs px-2 rounded" id="rtTotalMenu">{{stats.total_menu}} ✅</span></li></a>
+      <li class="p-3 hover:bg-gray-100 rounded">🏭 Produksi</li>
+      <li class="p-3 hover:bg-gray-100 rounded">🚚 Delivery</li>
+      <li class="p-3 hover:bg-gray-100 rounded">👥 Customer & Supplier</li>
+      <li class="p-3 hover:bg-gray-100 rounded">📈 Laporan</li>
+    </ul>
+    <div class="mt-4 p-2 bg-green-50 rounded text-[11px]">● Real-time: <span id="rtClock">--:--:--</span><br>Update tiap 8 detik<br>Foto: cuc,dgi,nbt,pck,plk,prs</div>
+    <a href="/" class="block mt-10 text-red-500 text-sm">Logout</a>
+  </nav>
+  <main class="flex-1 p-6 overflow-y-auto">
+    <h1 class="text-2xl font-bold mb-1">Dashboard Admin - Full Access <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded animate-pulse">● LIVE REAL-TIME</span></h1>
+    <p class="text-sm text-gray-500 mb-6">Data update otomatis dari Supabase - tanpa refresh - kategori sesuai foto</p>
+    
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-orange-500"><p class="text-xs text-gray-500 uppercase">Total Bahan Baku</p><p class="text-3xl font-bold" id="rtTotalBahanCard">{{stats.total_bahan}}</p><p class="text-xs text-green-600 mt-1" id="rtBahanUpdate">Real-time ●</p></div>
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-blue-500"><p class="text-xs text-gray-500 uppercase">Order Aktif</p><p class="text-3xl font-bold text-blue-600">{{stats.order_aktif}}</p><p class="text-xs text-gray-400">Hari ini</p></div>
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-green-500"><p class="text-xs text-gray-500 uppercase">Order Closed</p><p class="text-3xl font-bold text-green-600">{{stats.order_closed}}</p></div>
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-purple-500"><p class="text-xs text-gray-500 uppercase">Aset Inventory</p><p class="text-xl font-bold" id="rtAset">Rp {{'{:,.0f}'.format(stats.aset_inventory)}}</p><p class="text-xs text-green-500">Qty × Harga - Live</p></div>
+      
+      <div class="bg-red-50 p-5 rounded-xl shadow border border-red-200"><p class="text-xs text-red-500 uppercase">Stock Minimum</p><p class="text-3xl font-bold text-red-600" id="rtStockMin">{{stats.stock_min}} item</p><a href="/dashboard/admin/inventory" class="text-xs underline">Lihat →</a></div>
+      <div class="bg-white p-5 rounded-xl shadow border-l-4 border-orange-500"><p class="text-xs text-gray-500 uppercase">Total Menu Aktif</p><p class="text-3xl font-bold" id="rtMenu">{{stats.total_menu}}</p><p class="text-xs text-blue-600"><a href="/dashboard/admin/menu" class="underline">Master Menu Aktif →</a></p></div>
+      <div class="bg-white p-5 rounded-xl shadow"><p class="text-xs text-gray-500 uppercase">Food Cost % vs Target</p><p class="text-2xl font-bold">32% <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">vs 35% target</span></p></div>
+      <div class="bg-white p-5 rounded-xl shadow"><p class="text-xs text-gray-500 uppercase">Bahan Reject/Waste</p><p class="text-3xl font-bold">1.2%</p><p class="text-xs text-gray-400">Bulan ini</p></div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="bg-white p-4 rounded-xl shadow col-span-2">
+        <div class="flex justify-between items-center mb-3"><h3 class="font-bold">5 Bahan Stock Minimum Teratas (Live)</h3><span class="text-[11px] bg-green-100 text-green-700 px-2 py-1 rounded" id="lastUpdate">Update: --:--:--</span></div>
+        <table class="w-full text-sm" id="rtTable"><thead><tr class="text-gray-400 text-left text-[11px]"><th>Kode</th><th>Nama</th><th>Stock</th><th>Harga</th><th>Action</th></tr></thead>
+        <tbody id="rtTbody">
+        {% for b in bahan[:5] %}<tr class="border-t"><td class="py-2 font-mono text-xs">{{b.kode_bahan}}</td><td>{{b.nama_bahan|title if b.nama_bahan else ''}}</td><td>{{b.stock_qty}} {{b.satuan_default}}</td><td class="font-mono text-xs">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td><td><a href="/dashboard/admin/inventory" class="text-orange-600 text-xs">Edit</a></td></tr>{% endfor %}
+        </tbody>
+        </table>
+        <a href="/dashboard/admin/inventory" class="block mt-3 text-center bg-orange-500 text-white py-2 rounded text-sm">Kelola Semua <span id="rtTotalBahanBtn">{{stats.total_bahan}}</span> Bahan →</a>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow"><h3 class="font-bold mb-2">Menu Best Seller & Master Menu</h3><div id="rtMenuList" class="text-sm">{% for m in menus[:3] %}{{loop.index}}. {{m.nama_menu}} - HPP Rp {{'{:,.0f}'.format(m.hpp or 0)}}<br>{% else %}1. Nasi Box Premium<br>2. Tumpeng Mini<br>3. Snack Box{% endfor %}</div><div class="mt-4 p-3 bg-blue-50 rounded text-sm">✅ Master Menu Aktif<br>✅ <span id="rtBahanCount">{{stats.total_bahan}}</span> bahan real live<br>✅ Real-time 8 detik<br>✅ Kategori foto: cuc,dgi,nbt,pck,plk,prs</div><a href="/dashboard/admin/menu" class="block mt-3 bg-blue-500 text-white text-center py-2 rounded text-sm">Buka Master Menu →</a></div>
+    </div>
+  </main>
+</div>
+<script>
+async function refreshStats(){
+  try{
+    const res = await fetch('/api/stats/realtime');
+    const data = await res.json();
+    if(data.total_bahan!==undefined){
+      const els = ['rtTotalBahan','rtTotalBahanCard','rtTotalBahanSide','rtTotalBahanBtn','rtBahanCount'];
+      els.forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=data.total_bahan; });
+      const stockEl=document.getElementById('rtStockMin');
+      if(stockEl) stockEl.textContent=data.stock_min+' item';
+      const asetEl=document.getElementById('rtAset');
+      if(asetEl) asetEl.textContent='Rp '+Number(data.aset_inventory||0).toLocaleString('id-ID');
+      const menuEls=['rtTotalMenu','rtMenu'];
+      menuEls.forEach(id=>{ const el=document.getElementById(id); if(el){ const base=el.textContent.includes('✅')? data.total_menu+' ✅': data.total_menu; el.textContent=base; }});
+      if(data.items){
+        const tbody=document.getElementById('rtTbody');
+        if(tbody && data.items.length>0){
+          tbody.innerHTML=data.items.map(b=>`<tr class="border-t"><td class="py-2 font-mono text-xs">${b.kode_bahan}</td><td>${b.nama_bahan}</td><td>${b.stock_qty} ${b.satuan_default||''}</td><td class="font-mono text-xs">Rp ${Number(b.harga_per_satuan||0).toLocaleString('id-ID')}</td><td><a href="/dashboard/admin/inventory" class="text-orange-600 text-xs">Edit</a></td></tr>`).join('');
+        }
+      }
+    }
+    const now=new Date();
+    const t=now.toLocaleTimeString('id-ID');
+    const clock=document.getElementById('rtClock');
+    if(clock) clock.textContent=t;
+    const last=document.getElementById('lastUpdate');
+    if(last) last.textContent='Update: '+t;
+    const bUpdate=document.getElementById('rtBahanUpdate');
+    if(bUpdate) bUpdate.textContent='Real-time ● '+t;
+  }catch(e){ console.log('realtime error', e); }
+}
+setInterval(refreshStats, 8000);
+refreshStats();
+
+// juga refresh tabel minimum via endpoint khusus
+async function refreshMinStock(){
+  try{
+    const res=await fetch('/api/bahan/minimum');
+    const data=await res.json();
+    if(data.items){
+      const tbody=document.getElementById('rtTbody');
+      if(tbody){
+        tbody.innerHTML=data.items.map(b=>`<tr class="border-t"><td class="py-2 font-mono text-xs">${b.kode_bahan}</td><td>${b.nama_bahan}</td><td>${b.stock_qty} ${b.satuan_default||''}</td><td class="font-mono text-xs">Rp ${Number(b.harga_per_satuan||0).toLocaleString('id-ID')}</td><td><a href="/dashboard/admin/inventory" class="text-orange-600 text-xs">Edit</a></td></tr>`).join('');
+      }
+    }
+  }catch(e){}
+}
+setInterval(refreshMinStock, 15000);
+</script>
+</body></html>

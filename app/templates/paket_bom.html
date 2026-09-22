@@ -1,0 +1,117 @@
+<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script><title>Paket BOM - {{menu.nama_menu}} - JB KITCHEN</title></head>
+<body class="bg-gray-50">
+<div class="flex min-h-screen">
+<nav class="w-64 bg-white shadow p-6 shrink-0 sticky top-0 h-screen">
+<h2 class="font-bold text-xl text-purple-600">JB KITCHEN</h2><p class="text-xs text-gray-500 mb-6">Paket: {{menu.kode_menu}}</p>
+<ul class="space-y-1 text-sm">
+<a href="/dashboard/admin"><li class="p-3 hover:bg-gray-100 rounded">📊 Dashboard</li></a>
+<a href="/dashboard/admin/inventory"><li class="p-3 hover:bg-gray-100 rounded">📦 Inventory</li></a>
+<a href="/dashboard/admin/menu"><li class="bg-purple-100 p-3 rounded font-bold">🍱 Master Menu</li></a>
+</ul><a href="/dashboard/admin/menu" class="block mt-6 bg-gray-200 text-center p-2 rounded text-sm">← Kembali ke Master</a>
+</nav>
+<main class="flex-1 p-4 overflow-y-auto">
+<div class="bg-white rounded-xl shadow p-4">
+<div class="flex justify-between items-center mb-4">
+<div><h1 class="text-xl font-bold">📦 Paket BOM - {{menu.nama_menu}}</h1><p class="text-xs text-gray-500">Kode: {{menu.kode_menu}} | Porsi: {{menu.porsi}} {{menu.satuan}} | HPP/Porsi: Rp {{'{:,.0f}'.format(menu.hpp or 0)}} | Harga Jual: Rp {{'{:,.0f}'.format(menu.harga_jual or 0)}}</p></div>
+<div class="text-right"><span class="bg-purple-100 px-3 py-1 rounded text-xs font-bold">PAKET MASAKAN</span><div class="text-xs mt-1">HPP Final: <span id="hppFinalHeader" class="font-bold">Rp 0</span></div></div>
+</div>
+<div class="bg-purple-50 p-3 rounded border border-purple-200 mb-4 text-[11px]"><b>Flow Paket:</b> BOM = Resep Masakan + Bahan Tambahan (buah, air minum, box nasi, kerupuk) | Qty batch = 1 porsi paket | Tambah resep dulu, baru tambah buah/air/box</div>
+
+<!-- SECTION 1: PILIH RESEP -->
+<div class="mb-4 bg-purple-50/50 border-2 border-purple-200 rounded p-3">
+<h3 class="font-bold text-[13px] mb-2">① Pilih Resep Masakan untuk Paket</h3>
+<div class="flex gap-2 mb-2">
+<input id="searchResep" type="text" placeholder="🔍 Cari resep: Opor, Rendang, Telur Balado" class="border-2 border-purple-300 p-2 rounded text-sm flex-1" onkeyup="filterResep()">
+<span id="searchInfoResep" class="text-[10px] bg-purple-100 px-2 py-2 rounded">{{resep_list|length}} resep tersedia</span>
+</div>
+<div class="flex gap-2">
+<select id="resepSelect" class="border p-2 rounded text-sm flex-1 font-mono"><option value="">Pilih Resep (Resep-TelurBalado-002 → Telur Balado → HPP Rp 7.002)...</option>
+{% for m in resep_list %}<option value="{{m.id}}" data-kode="{{m.kode_menu}}" data-nama="{{m.nama_menu|lower}}" data-hpp="{{m.hpp or 0}}">{{m.kode_menu}} → {{m.nama_menu}} → HPP {{'{:,.0f}'.format(m.hpp or 0)}}/porsi</option>{% endfor %}</select>
+<input type="number" id="resepQty" placeholder="Qty" step="0.01" class="border-2 border-purple-300 p-2 rounded text-sm w-20 font-bold" value="1"><span class="py-2 text-xs">batch</span>
+<button onclick="addResepToPaket()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah Resep</button>
+</div>
+</div>
+
+<!-- SECTION 2: BAHAN TAMBAHAN BUAH, AIR, BOX -->
+<div class="mb-4 bg-green-50/50 border-2 border-green-200 rounded p-3">
+<h3 class="font-bold text-[13px] mb-2">② Tambahan Bahan Lain (buah, air minum, box nasi, kerupuk)</h3>
+<div class="flex gap-2 mb-2">
+<input id="searchBahan" type="text" placeholder="🔍 Cari: buah, air minum, pisang, box nasi, kerupuk, sambal" class="border-2 border-green-300 p-2 rounded text-sm flex-1" onkeyup="filterBahan()">
+<button onclick="document.getElementById('searchBahan').value=''; filterBahan();" class="bg-gray-200 px-3 rounded text-xs">Clear</button>
+<span id="searchInfoBahan" class="text-[10px] bg-green-100 px-2 py-2 rounded">{{bahan|length}} bahan</span>
+</div>
+<div class="flex gap-2">
+<select id="bahanSelect" class="border p-2 rounded text-sm flex-1 font-mono text-[13px]" onchange="onBahanChange()">
+<option value="">Pilih Bahan Tambahan (buah, air minum, box nasi)...</option>
+{% for b in bahan %}<option value="{{b.id}}" data-kode="{{b.kode_bahan}}" data-sub="{{b.kode_kategori}}" data-no="{{b.kode_bahan.split('-')[-1] if '-' in b.kode_bahan else ''}}" data-nama="{{b.nama_bahan|lower}}" data-namaori="{{b.nama_bahan}}" data-harga="{{b.harga_per_satuan or 0}}" data-satuan="{{b.satuan_default}}">{{b.kode_kategori}}-{{b.kode_bahan.split('-')[-1]}} → {{b.nama_bahan|title}} → Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}} → {{b.satuan_default}}</option>{% endfor %}
+</select>
+<input type="number" id="bahanQty" placeholder="Qty" step="0.001" class="border-2 border-green-300 p-2 rounded text-sm w-24 font-bold">
+<select id="bahanSatuan" class="border-2 border-blue-300 p-2 rounded text-xs w-20 font-bold bg-blue-50"><option>Pcs</option><option>Kg</option><option>Liter</option><option>Buah</option><option>Botol</option><option>Pack</option></select>
+<span id="bahanSatuanLabel" class="py-2 text-xs font-bold">Satuan</span>
+<button onclick="addBahanToPaket()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah Bahan</button>
+</div>
+<div id="bahanPreview" class="hidden mt-2 p-2 bg-white rounded text-[11px] border"></div>
+</div>
+
+<!-- TABEL BOM PAKET ONLY -->
+<div class="bg-white rounded border overflow-hidden">
+<table class="w-full text-[13px]"><thead class="bg-purple-100 text-[12px]"><tr class="text-left"><th class="p-2">Kode (sub-no → Nama → Harga → Sat)</th><th class="p-2">Nama Bahan / Resep</th><th class="p-2">Qty (1 porsi)</th><th class="p-2">Total Qty</th><th class="p-2">Harga</th><th class="p-2">Subtotal (tanpa desimal)</th><th class="p-2">Action</th></tr></thead><tbody id="bomBody"><tr><td colspan="7" class="p-3 text-center">Loading...</td></tr></tbody></table>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4">
+<div class="bg-purple-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">📊 HPP BAHAN BAKU PAKET</h4><div class="text-[12px]"><div class="flex justify-between"><span>Total Bahan Baku:</span><span id="totalBahan" class="font-bold">Rp 0</span></div></div></div>
+<div class="bg-blue-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">🧮 HPP FINAL Paket per Porsi (tanpa desimal)</h4><div class="text-[11px] space-y-1"><div class="flex justify-between"><span>HPP Bahan per Porsi:</span><span id="hppBahan">Rp 0</span></div><div class="flex justify-between"><span>OH 10%:</span><span id="hppOH">Rp 0</span></div><div class="flex justify-between"><span>Delivery 5%:</span><span id="hppDel">Rp 0</span></div><div class="flex justify-between"><span>Manpower:</span><span id="hppMP">Rp 4.500</span></div><div class="flex justify-between font-bold text-[13px] bg-green-100 p-2 rounded mt-2"><span>HPP FINAL per Porsi:</span><span id="hppFinal" class="text-green-700">Rp 0</span></div></div></div>
+</div>
+</div>
+</main>
+</div>
+<script>
+const MENU_ID="{{menu.id}}";
+function fmtQty(v){let s=Number(v).toFixed(3);s=s.replace(/\.?0+$/,'');return s||'0';}
+function fmtRp(v){return 'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID');}
+function filterResep(){
+  const q=document.getElementById('searchResep').value.toLowerCase().trim(); const sel=document.getElementById('resepSelect'); let shown=0;
+  for(let i=0;i<sel.options.length;i++){const opt=sel.options[i]; if(i==0){opt.hidden=false;continue;} const txt=(opt.dataset.kode||'')+' '+(opt.dataset.nama||'')+' '+opt.textContent.toLowerCase(); let m=q===''||txt.includes(q); opt.hidden=!m; if(m) shown++;} document.getElementById('searchInfoResep').textContent=q?`Ditemukan ${shown} resep untuk "${q}"`:`${sel.options.length-1} resep`;
+}
+function filterBahan(){
+  const q=document.getElementById('searchBahan').value.toLowerCase().trim(); const sel=document.getElementById('bahanSelect'); let shown=0;
+  for(let i=0;i<sel.options.length;i++){const opt=sel.options[i]; if(i==0){opt.hidden=false;continue;} const n=(opt.dataset.nama||'').toLowerCase(); const t=opt.textContent.toLowerCase(); let m=q===''||n.includes(q)||t.includes(q); opt.hidden=!m; if(m) shown++;} document.getElementById('searchInfoBahan').textContent=q?`Ditemukan ${shown} bahan untuk "${q}"`:`${sel.options.length-1} bahan tambahan`;
+}
+function onBahanChange(){
+  const sel=document.getElementById('bahanSelect'); const opt=sel.options[sel.selectedIndex]; if(!opt||!opt.value) return;
+  document.getElementById('bahanSatuanLabel').textContent=opt.dataset.satuan||'Pcs'; document.getElementById('bahanSatuan').value=opt.dataset.satuan||'Pcs';
+  const p=document.getElementById('bahanPreview'); p.classList.remove('hidden'); p.innerHTML=`${opt.dataset.sub||''}-${opt.dataset.no||''} → ${opt.dataset.namaori||''} → ${fmtRp(opt.dataset.harga)} → ${opt.dataset.satuan||''}`;
+}
+async function loadBOM(){
+  document.getElementById('bomBody').innerHTML='<tr><td colspan="7" class="p-3 text-center">Loading...</td></tr>';
+  try{
+    const res=await fetch(`/api/menu/${MENU_ID}/resep`); const data=await res.json();
+    const tbody=document.getElementById('bomBody'); let total=0; let html='';
+    const items=data.items||[];
+    if(items.length===0){ html='<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada resep/bahan - pilih resep atau buah/air/box di atas</td></tr>'; }
+    else{
+      items.forEach(item=>{
+        const qty=parseFloat(item.qty_need||0); const totalQty=parseFloat(item.total_qty||0)||qty; const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
+        let label=''; let kodeDisplay=item.kode_bahan||'';
+        if(item.tipe==='paket'){ label='<span class="bg-purple-100 px-1 rounded text-[9px]">PAKET RESEP</span>'; }
+        else if(item.tipe==='paket_bahan'){ label='<span class="bg-green-100 px-1 rounded text-[9px]">PAKET BAHAN</span>'; }
+        else{ label='<span class="bg-orange-100 px-1 rounded text-[9px]">RESEP</span>'; }
+        html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${label}<br>${kodeDisplay}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}<br><span class="text-[10px] text-gray-500">Stock: ${item.stock_qty||0} ${item.satuan||''}</span></td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||item.satuan||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
+      });
+    }
+    tbody.innerHTML=html; document.getElementById('totalBahan').textContent=fmtRp(total);
+    const calc=data.hpp_calc; if(calc){ document.getElementById('hppBahan').textContent=fmtRp(calc.hpp_bahan_per_porsi); document.getElementById('hppOH').textContent=fmtRp(calc.oh_cost); document.getElementById('hppDel').textContent=fmtRp(calc.delivery_cost); document.getElementById('hppMP').textContent=fmtRp(calc.manpower_per_porsi); document.getElementById('hppFinal').textContent=fmtRp(calc.hpp_final_per_porsi); document.getElementById('hppFinalHeader').textContent=fmtRp(calc.hpp_final_per_porsi); }
+  }catch(e){ document.getElementById('bomBody').innerHTML=`<tr><td colspan="7" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`; }
+}
+async function addResepToPaket(){
+  const sel=document.getElementById('resepSelect'); const id=sel.value; const qty=parseFloat(document.getElementById('resepQty').value)||0;
+  if(!id){alert('Pilih resep dulu');return;} if(!qty||qty<=0){alert('Isi Qty batch');return;}
+  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add-paket`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paket_menu_id:id,qty_need:qty})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} sel.selectedIndex=0; await loadBOM(); }catch(e){alert(e.message);} }
+async function addBahanToPaket(){
+  const sel=document.getElementById('bahanSelect'); const id=sel.value; const qty=parseFloat(document.getElementById('bahanQty').value)||0; const satuan=document.getElementById('bahanSatuan').value||'Pcs';
+  if(!id){alert('Pilih bahan tambahan dulu: buah, air minum, box');return;} if(!qty||qty<=0){alert('Isi Qty');return;}
+  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bahan_id:id,qty_need:qty,satuan_input:satuan,tipe:'paket'})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} document.getElementById('bahanQty').value=''; sel.selectedIndex=0; document.getElementById('bahanPreview').classList.add('hidden'); await loadBOM(); }catch(e){alert(e.message);} }
+async function deleteBOM(id){ if(!confirm('Hapus?')) return; await fetch(`/api/resep/${id}`,{method:'DELETE'}); await loadBOM(); }
+loadBOM();
+</script>
+</body></html>
