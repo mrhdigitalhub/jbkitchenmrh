@@ -20,7 +20,7 @@
 
 <!-- SECTION 1: PILIH RESEP -->
 <div class="mb-4 bg-purple-50/50 border-2 border-purple-200 rounded p-3">
-<h3 class="font-bold text-[13px] mb-2">① Pilih Resep Masakan untuk Paket</h3>
+<h3 class="font-bold text-[13px] mb-2">① Pilih Resep Masakan untuk Paket — OPSI A: 1 batch = 1 porsi paket</h3>
 <div class="flex gap-2 mb-2">
 <input id="searchResep" type="text" placeholder="🔍 Cari resep: Opor, Rendang, Telur Balado" class="border-2 border-purple-300 p-2 rounded text-sm flex-1" onkeyup="filterResep()">
 <span id="searchInfoResep" class="text-[10px] bg-purple-100 px-2 py-2 rounded">{{resep_list|length}} resep tersedia</span>
@@ -28,9 +28,10 @@
 <div class="flex gap-2">
 <select id="resepSelect" class="border p-2 rounded text-sm flex-1 font-mono"><option value="">Pilih Resep (Resep-TelurBalado-002 → Telur Balado → HPP Rp 7.002)...</option>
 {% for m in resep_list %}<option value="{{m.id}}" data-kode="{{m.kode_menu}}" data-nama="{{m.nama_menu|lower}}" data-hpp="{{m.hpp or 0}}">{{m.kode_menu}} → {{m.nama_menu}} → HPP {{'{:,.0f}'.format(m.hpp or 0)}}/porsi</option>{% endfor %}</select>
-<input type="number" id="resepQty" placeholder="Qty" step="0.01" class="border-2 border-purple-300 p-2 rounded text-sm w-20 font-bold" value="1"><span class="py-2 text-xs">batch</span>
+<input type="number" id="resepQty" placeholder="Qty" step="1" class="border-2 border-purple-300 p-2 rounded text-sm w-20 font-bold bg-gray-100" value="1" readonly title="Opsi A: 1 batch per porsi paket"><span class="py-2 text-xs font-bold">batch</span>
 <button onclick="addResepToPaket()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah Resep</button>
 </div>
+<div class="text-[10px] text-gray-500 mt-1">Opsi A: Qty selalu 1 batch, Total Qty = 1 batch × {{menu.porsi or 15}} porsi paket = {{menu.porsi or 15}} batch</div>
 </div>
 
 <!-- SECTION 2: BAHAN TAMBAHAN BUAH, AIR, BOX -->

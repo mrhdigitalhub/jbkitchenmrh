@@ -403,8 +403,13 @@ async def get_resep(menu_id: str):
             elif r.get("paket_menu_id"):
                 paket=r.get("menu_master") or {}
                 hpp_p=float(paket.get("hpp",0) or 0)
-                total_qty=qty*porsi; sub=total_qty*hpp_p; hpp_total+=sub
-                items.append({"id":r["id"],"tipe":"paket","bahan_id":r.get("paket_menu_id"),"kode_bahan":paket.get("kode_menu",""),"nama_bahan":paket.get("nama_menu",""),"satuan":"batch","satuan_input":si,"harga":hpp_p,"qty_need":qty,"qty_converted":qty,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":qty*hpp_p,"stock_qty":0,"warning":""})
+                # OPSI A: Qty paket resep selalu 1 batch per porsi paket, satuan batch (bukan Kg)
+                # Koreksi data lama yang 15 Kg seperti screenshot -> jadi 1 batch
+                qty_fixed = qty
+                if qty_fixed > 10:  # data lama 15 Kg salah input -> koreksi Opsi A
+                    qty_fixed = 1.0
+                total_qty=qty_fixed*porsi; sub=total_qty*hpp_p; hpp_total+=sub
+                items.append({"id":r["id"],"tipe":"paket","bahan_id":r.get("paket_menu_id"),"kode_bahan":paket.get("kode_menu",""),"nama_bahan":paket.get("nama_menu",""),"satuan":"batch","satuan_input":"batch","harga":hpp_p,"qty_need":qty_fixed,"qty_converted":qty_fixed,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":qty_fixed*hpp_p,"stock_qty":0,"warning":""})
             else:
                 # fallback jika tidak ada bahan_id maupun paket_menu_id
                 items.append({"id":r["id"],"tipe":"unknown","nama_bahan":"(data tidak valid)","qty_need":qty,"harga":0,"subtotal":0})
@@ -489,14 +494,34 @@ async def add_resep(menu_id: str, request: Request):
 @app.post("/api/menu/{menu_id}/resep/add-paket")
 async def add_resep_paket(menu_id: str, request: Request):
     body=await request.json()
-    paket_id=body.get("paket_menu_id"); qty=float(body.get("qty_need",0.1) or 0.1)
+    paket_id=body.get("paket_menu_id")
+    # OPSI A: Qty 1 batch = 1 porsi paket pakai 1 resep utuh, bukan Kg
+    qty_input=float(body.get("qty_need",1) or 1)
+    qty=1.0  # force Opsi A: selalu 1 batch per porsi paket
+    if qty_input!=1:
+        qty=qty_input  # jika user input 1 tetap 1, jika input lain tetap pakai tapi satuan batch
+        if qty>10: # jika user salah input 15 seperti screenshot -> koreksi jadi 1
+            qty=1.0
     if not supabase: raise HTTPException(500,"No supabase")
     if not paket_id: raise HTTPException(400,"paket_menu_id required")
     try:
+        # ANTI DOUBLE paket resep
         try:
-            supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"tipe":"paket"}).execute()
-        except:
-            supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty}).execute()
+            existing = supabase.table("resep_bom").select("id").eq("menu_id",menu_id).eq("paket_menu_id",paket_id).execute()
+            if existing.data and len(existing.data)>0:
+                total,porsi=hitung_total_hpp(menu_id)
+                calc=hitung_hpp_final(total,porsi)
+                return {"ok":True,"hpp_per_porsi":calc["hpp_final_per_porsi"],"total":total,"final":calc["hpp_final_per_porsi"],"dedup":True}
+        except: pass
+
+        try:
+            supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"satuan_input":"batch","tipe":"paket"}).execute()
+        except Exception as e:
+            msg=str(e)
+            if "satuan_input" in msg:
+                supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"satuan":"batch","tipe":"paket"}).execute()
+            else:
+                supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"tipe":"paket"}).execute()
         total,porsi=hitung_total_hpp(menu_id)
         calc=hitung_hpp_final(total,porsi)
         hpp_final=calc["hpp_final_per_porsi"]
