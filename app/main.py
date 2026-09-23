@@ -417,18 +417,28 @@ async def root(request: Request): return RedirectResponse("/dashboard/admin")
 async def dashboard_admin(request: Request):
     try:
         stats = await stats_realtime()
-        # Debug: jika stats error
-        if "error" in stats and stats.get("total_bahan", 0) == 0:
-            print(f"[ADMIN ERROR] {stats.get('error')}")
+        # FIX: template Bapak pakai {{stats.total_bahan}} dan {{role}}
+        # Jadi kita kirim BOTH: object stats + unpacked + role
+        context = {
+            "request": request,
+            "stats": stats,  # untuk {{stats.total_bahan}}
+            "role": "ADMIN",  # untuk {{role}}
+            "total_bahan": stats.get("total_bahan", 0),
+            "aset_inventory": stats.get("aset_inventory", 0),
+            "stock_min": stats.get("stock_min", 0),
+            "total_menu": stats.get("total_menu", 0),
+            "items": stats.get("items", []),
+        }
+        # juga unpack semua biar {{total_bahan}} tetap jalan
+        context.update(stats)
         if templates is None:
-            return HTMLResponse(f"<h1>JB KITCHEN MRH - Templates NOT FOUND</h1><pre>{json.dumps(stats, indent=2, default=str)}</pre><p>Candidates checked: {templates_candidates if 'templates_candidates' in globals() else 'unknown'}</p>")
-        # Pastikan dashboard_admin.html ada
-        return templates.TemplateResponse(request, "dashboard_admin.html", {"request": request, **stats})
+            return HTMLResponse(f"<h1>Templates NOT FOUND</h1><pre>{json.dumps(stats, indent=2, default=str)}</pre>")
+        return templates.TemplateResponse(request, "dashboard_admin.html", context)
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
         print(f"[ADMIN CRASH] {e}\n{tb}")
-        return HTMLResponse(f"<h1>JB KITCHEN MRH - ERROR DEBUG</h1><h3>Error: {e}</h3><pre>{tb}</pre><hr><pre>ENV SUPABASE_URL set: {bool(os.getenv('SUPABASE_URL'))} | SUPABASE_KEY set: {bool(os.getenv('SUPABASE_KEY'))}</pre>", status_code=500)
+        return HTMLResponse(f"<h1>JB KITCHEN MRH - ERROR DEBUG</h1><h3>Error: {e}</h3><pre>{tb}</pre>", status_code=500)
 
 @app.get("/dashboard/admin/inventory/save", response_class=HTMLResponse)
 async def inv_save_dummy(): return RedirectResponse("/dashboard/admin/inventory")
