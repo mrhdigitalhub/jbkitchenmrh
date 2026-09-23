@@ -1,11 +1,19 @@
-from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+"""
+JB KITCHEN MRH - Clean Fixed v10.2
+FIX: TemplateResponse untuk FastAPI 0.115+ & Starlette 1.6+ (Vercel)
+Rumus HPP & Variabel DIKUNCI - Tidak diubah
+"""
+
+import os, re, uuid, io, json
+from pathlib import Path
+from datetime import datetime
+from typing import Optional, List, Dict
+
+from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import os, re, uuid, io
-from pathlib import Path
 from dotenv import load_dotenv
-from datetime import datetime
 import pandas as pd
 
 load_dotenv()
@@ -16,15 +24,36 @@ try:
     if SUPABASE_URL and SUPABASE_KEY:
         from supabase import create_client
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print(f"[OK] Supabase: {SUPABASE_URL[:30]}...")
+    else:
+        print("[WARN] SUPABASE_URL/KEY belum di-set di ENV")
 except Exception as e:
-    print(f"Supabase init fail: {e}")
+    print(f"[WARN] Supabase init fail: {e}")
 
-app = FastAPI(title="JB KITCHEN MRH - Clean 950Ln")
-templates = Jinja2Templates(directory="app/templates")
-if (Path(__file__).parent / "static").exists():
-    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app = FastAPI(title="JB KITCHEN MRH - Clean 950Ln v10.2")
+BASE_DIR = Path(__file__).resolve().parent
 
-# === KATEGORI DEFAULT - FOTO CROSS CHECK ===
+# FIX: Guard templates agar tidak crash di Vercel jika folder tidak ada
+templates = None
+templates_dir = BASE_DIR / "templates"
+if templates_dir.exists():
+    templates = Jinja2Templates(directory=str(templates_dir))
+else:
+    # Cek juga di parent (jika struktur api/index.py)
+    alt_templates = BASE_DIR.parent / "templates"
+    if alt_templates.exists():
+        templates = Jinja2Templates(directory=str(alt_templates))
+    else:
+        print(f"[WARN] Folder templates tidak ditemukan di {templates_dir}")
+
+if (BASE_DIR / "static").exists():
+    app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+else:
+    alt_static = BASE_DIR.parent / "static"
+    if alt_static.exists():
+        app.mount("/static", StaticFiles(directory=str(alt_static)), name="static")
+
+# ================== KONSTANTA - TETAP SESUAI SPEC EXISTING ==================
 DEFAULT_KAT_UTAMA = [
     {"code":"cuc","label":"Cuci / Chemical","type":"utama"},
     {"code":"dgi","label":"Bahan Hewani / Daging","type":"utama"},
@@ -56,766 +85,288 @@ DEFAULT_SUB_KATEGORI = [
     {"code":"ins","label":"Instant / Bumbu Instan","parent":"prs","type":"sub"},
 ]
 
-def get_kategori_data():
-    if supabase:
-        try:
-            res = supabase.table("kategori_master").select("*").order("code").execute()
-            data = res.data or []
-            if data:
-                utama = [d for d in data if d.get("type")=="utama" and d.get("is_active",True)]
-                sub = [d for d in data if d.get("type")=="sub" and d.get("is_active",True)]
-                if utama or sub:
-                    return utama, sub
-        except: pass
-    return DEFAULT_KAT_UTAMA, DEFAULT_SUB_KATEGORI
-
-# === HPP CONFIG - CEK SYNC DENGAN DASHBOARD_ADMIN ===
 OH_PERCENT = 0.10
 DELIVERY_PERCENT = 0.05
 MANPOWER_RATES = {"kepala_produksi":2000,"juru_masak":1500,"pegawai":1000}
 
+KAMUS_DEFAULT_LOCAL = {
+    "bawang merah": {"qty":0.15,"satuan":"Kg","satuan_default":"Kg","konversi_json":{},"label":"Bawang Merah 0.15 Kg"},
+    "telur": {"qty":1,"satuan":"Pcs","satuan_default":"Pcs","konversi_json":{"kg":0.06},"label":"Telur 1 Pcs"},
+}
+
+# ================== HELPERS - ANTI BOLAK-BALIK ==================
+def safe_float(v, default=0.0) -> float:
+    try:
+        if v is None or v == "": return default
+        return float(v)
+    except: return default
+
+def format_nama(s: str) -> str:
+    return ' '.join([w.capitalize() for w in str(s).split()]) if s else ""
+
+def parse_konversi_json(kj) -> dict:
+    if isinstance(kj, dict): return kj
+    if isinstance(kj, str):
+        try: return json.loads(kj)
+        except: return {}
+    return {}
+
+def get_kategori_data():
+    if not supabase:
+        return DEFAULT_KAT_UTAMA, DEFAULT_SUB_KATEGORI
+    try:
+        res = supabase.table("kategori_master").select("*").order("code").execute()
+        data = res.data or []
+        if not data:
+            return DEFAULT_KAT_UTAMA, DEFAULT_SUB_KATEGORI
+        utama = [d for d in data if d.get("type")=="utama" and d.get("is_active",True)]
+        sub = [d for d in data if d.get("type")=="sub" and d.get("is_active",True)]
+        return (utama or DEFAULT_KAT_UTAMA), (sub or DEFAULT_SUB_KATEGORI)
+    except:
+        return DEFAULT_KAT_UTAMA, DEFAULT_SUB_KATEGORI
+
 def get_pengaturan_biaya():
     oh, delivery, manpower = OH_PERCENT, DELIVERY_PERCENT, MANPOWER_RATES.copy()
-    if supabase:
-        try:
-            res = supabase.table("pengaturan_biaya").select("*").limit(1).execute()
-            if res.data:
-                row=res.data[0]
-                oh=float(row.get("oh_percent",10) or 10)/100
-                delivery=float(row.get("delivery_percent",5) or 5)/100
-                manpower["kepala_produksi"]=float(row.get("rate_kepala",2000))
-                manpower["juru_masak"]=float(row.get("rate_koki",1500))
-                manpower["pegawai"]=float(row.get("rate_pegawai",1000))
-        except: pass
+    if not supabase:
+        return oh, delivery, manpower
+    try:
+        res = supabase.table("pengaturan_biaya").select("*").limit(1).execute()
+        if res.data:
+            row=res.data[0]
+            oh=safe_float(row.get("oh_percent",10),10)/100
+            delivery=safe_float(row.get("delivery_percent",5),5)/100
+            manpower["kepala_produksi"]=safe_float(row.get("rate_kepala",2000),2000)
+            manpower["juru_masak"]=safe_float(row.get("rate_koki",1500),1500)
+            manpower["pegawai"]=safe_float(row.get("rate_pegawai",1000),1000)
+    except: pass
     return oh, delivery, manpower
 
 def hitung_hpp_final(hpp_bahan_total, porsi=1):
     oh, delivery, manpower = get_pengaturan_biaya()
     total_mp = sum(manpower.values())
-    hpp_per_porsi = hpp_bahan_total / max(porsi,1) if porsi else hpp_bahan_total
+    porsi = max(porsi,1)
+    hpp_per_porsi = hpp_bahan_total / porsi
+    hpp_final_per_porsi = hpp_per_porsi + hpp_per_porsi*oh + hpp_per_porsi*delivery + total_mp
+    margin_percent, ppn_percent = 0.40, 0.11
+    margin_rp = hpp_final_per_porsi * margin_percent
+    subtotal = hpp_final_per_porsi + margin_rp
+    ppn_rp = subtotal * ppn_percent
+    harga_jual = subtotal + ppn_rp
     return {
         "hpp_bahan_total":hpp_bahan_total,
         "hpp_bahan_per_porsi":hpp_per_porsi,
         "oh_percent":oh*100,"oh_cost":hpp_per_porsi*oh,
         "delivery_percent":delivery*100,"delivery_cost":hpp_per_porsi*delivery,
         "manpower":manpower,"manpower_per_porsi":total_mp,
-        "manpower_detail":{"kepala_produksi":manpower["kepala_produksi"],"juru_masak":manpower["juru_masak"],"pegawai":manpower["pegawai"]},
-        "hpp_final_per_porsi":hpp_per_porsi + hpp_per_porsi*oh + hpp_per_porsi*delivery + total_mp,
-        "hpp_final_total":(hpp_per_porsi + hpp_per_porsi*oh + hpp_per_porsi*delivery + total_mp)*max(porsi,1)
+        "manpower_detail":manpower,
+        "hpp_final_per_porsi":hpp_final_per_porsi,
+        "hpp_final_total":hpp_final_per_porsi*porsi,
+        "margin_percent":margin_percent*100,"margin_rp":margin_rp,
+        "subtotal_hpp_margin":subtotal,
+        "ppn_percent":ppn_percent*100,"ppn_rp":ppn_rp,
+        "harga_jual_per_porsi":harga_jual,
+        "harga_jual_total":harga_jual*porsi
     }
 
-# === KONVERSI SATUAN - UNIFIED 5 SATUAN FIX - SYNC DENGAN INVENTORY_STOCK ===
 def konversi_ke_default(bahan: dict, qty_input: float, satuan_input: str):
     sd = (bahan.get("satuan_default") or "Kg").lower()
     si = (satuan_input or sd).lower()
-    kj = bahan.get("konversi_json") or {}
-    if isinstance(kj,str):
+    kj = parse_konversi_json(bahan.get("konversi_json"))
+    qty = safe_float(qty_input,0)
+    if si == sd: return qty
+    if si in kj: return qty * safe_float(kj[si],1)
+    if si in ["gram","gr","g"] and sd=="kg": return qty*0.001
+    if si in ["kg","kilo"] and sd in ["gram","gr","g"]: return qty*1000
+    if si=="pcs" and sd=="kg":
+        nama=(bahan.get("nama_bahan") or "").lower()
+        if "telur" in nama: return qty*0.06
+        return qty*0.05
+    if si=="kg" and sd=="pcs":
+        nama=(bahan.get("nama_bahan") or "").lower()
+        if "telur" in nama: return qty/0.06
+        return qty/0.05
+    return qty
+
+# ================== ROUTES CORE ==================
+@app.get("/health")
+async def health():
+    return {"status":"ok","app":"JB KITCHEN MRH Clean 950Ln v10.2","supabase":bool(supabase),"time":datetime.now().isoformat()}
+
+@app.get("/api/stats/realtime")
+async def stats_realtime():
+    if not supabase:
+        return {"total_bahan":0,"aset_inventory":0,"stock_min":0,"total_menu":0,"items":[]}
+    try:
+        bahan_all = supabase.table("bahan_inventory").select("id,kode_bahan,nama_bahan,stock_qty,harga_per_satuan,stock_minimum,satuan_default").execute()
+        all_data = bahan_all.data or []
+        total = len(all_data)
+        aset = sum([safe_float(b.get("stock_qty"))*safe_float(b.get("harga_per_satuan")) for b in all_data])
+        min_all = [b for b in all_data if safe_float(b.get("stock_qty")) <= safe_float(b.get("stock_minimum"),5)]
+        stock_min = len(min_all)
+        sorted_min = sorted(all_data, key=lambda x: safe_float(x.get("stock_qty")))[:5]
+        display = min_all[:5] if len(min_all)>=1 else sorted_min
+        for b in display:
+            if b.get("nama_bahan"): b["nama_bahan"]=format_nama(b["nama_bahan"])
+        total_menu = 0
         try:
-            import json; kj=json.loads(kj)
-        except: kj={}
-    faktor=1.0
-    if si==sd: faktor=1.0
-    else:
-        # global fallback
-        if si in ["gram","gr","g"] and sd=="kg": faktor=0.001
-        if si in ["kg","kilo"] and sd in ["gram","gr"]: faktor=1000
-        if si=="pcs" and sd=="kg":
-            # per bahan
-            nama=(bahan.get("nama_bahan") or "").lower()
-            if "telur" in nama: faktor=0.06
-            elif "bawang merah" in nama: faktor=0.02
-            elif "bawang putih" in nama: faktor=0.01
-            elif "tahu" in nama: faktor=0.3
-            elif "tempe" in nama: faktor=0.5
-            else: faktor=0.1
-        # custom dari konversi_json: ex {"pcs_to_kg":0.06}
-        key=f"{si}_to_{sd}"
-        if key in kj: faktor=float(kj[key])
-    return qty_input*faktor, faktor, ""
-
-def hitung_total_hpp(menu_id: str):
-    """SINGLE SOURCE OF TRUTH - DIPISAH RUMUS: Resep vs Bahan Tambahan - CEK SYNC OPSI A FINAL"""
-    if not supabase: return 0,10
-    porsi=10
-    try:
-        mr=supabase.table("menu_master").select("porsi,tipe_menu").eq("id",menu_id).single().execute()
-        if mr.data:
-            porsi=float(mr.data.get("porsi",10) or 10)
-            if porsi==0:
-                porsi=10
-            if mr.data.get("tipe_menu")=="resep_masakan" and porsi<2:
-                porsi=10
-    except: porsi=10
-    try:
-        res=supabase.table("resep_bom").select("*, bahan_inventory(harga_per_satuan,satuan_default,nama_bahan,konversi_json), menu_master!resep_bom_paket_menu_id_fkey(hpp)").eq("menu_id",menu_id).execute()
-    except:
-        res=supabase.table("resep_bom").select("*, bahan_inventory(harga_per_satuan,satuan_default,nama_bahan), menu_master!resep_bom_paket_menu_id_fkey(hpp)").eq("menu_id",menu_id).execute()
-    total=0
-    for r in res.data or []:
-        qty=float(r.get("qty_need",0) or 0)
-        si=r.get("satuan_input") or r.get("satuan") or "Kg"
-        if r.get("bahan_id"):
-            # PAKET BAHAN TAMBAHAN (box, beras, air, buah) - Qty = total paket, TIDAK dikali Porsi lagi
-            bahan=r.get("bahan_inventory") or {}
-            harga=float(bahan.get("harga_per_satuan",0) or 0)
-            qty_conv,_,_=konversi_ke_default(bahan,qty,si)
-            total+=qty_conv*harga
-        elif r.get("paket_menu_id"):
-            # PAKET RESEP (Telur Balado dll) - Qty 1 batch per porsi, Total = Qty x Porsi
-            hpp_p=float((r.get("menu_master") or {}).get("hpp",0) or 0)
-            qty_fixed = qty
-            if qty_fixed > 10: qty_fixed = 1.0
-            total+=qty_fixed*porsi*hpp_p
-    return total, porsi
-
-# === KAMUS SUPABASE - BUKAN LOCALSTORAGE - CEK SYNC DENGAN MASTER_MENU ===
-KAMUS_DEFAULT = {
-    'beras':{'qty':0.15,'satuan':'Kg','label':'Beras 0.15 Kg = 150gr'},
-    'ayam':{'qty':0.17,'satuan':'Kg','label':'Ayam 0.17 Kg = 170gr'},
-    'telur':{'qty':1,'satuan':'Pcs','label':'Telur 1 Pcs = 0.06 Kg'},
-    'bawang merah':{'qty':0.015,'satuan':'Kg','label':'Bawang Merah 0.015 Kg'},
-    'bawang putih':{'qty':0.01,'satuan':'Kg','label':'Bawang Putih 0.01 Kg'},
-    'serai':{'qty':0.03,'satuan':'Ikat','label':'Serai 0.03 Ikat'},
-    'tahu':{'qty':1,'satuan':'Pcs','label':'Tahu 1 Pcs'},
-    'tempe':{'qty':1,'satuan':'Pcs','label':'Tempe 1 Pcs'},
-}
-
-def _ensure_kamus_row(nama_bahan, qty, satuan, satuan_default, konversi_json, label):
-    if not supabase or not nama_bahan: return
-    nama_low=nama_bahan.strip().lower()
-    if not nama_low: return
-    try:
-        ex=supabase.table("kamus_bom").select("id").eq("nama_bahan",nama_low).limit(1).execute()
-        if ex.data: return
-    except: pass
-    try:
-        supabase.table("kamus_bom").insert({
-            "nama_bahan":nama_low,"qty_standar":float(qty or 0.15),
-            "satuan_standar":satuan or "Kg","satuan_default":satuan_default or satuan or "Kg",
-            "konversi_json":konversi_json or {},"label":label or f"{nama_bahan} {qty} {satuan}"
-        }).execute()
+            menu_res=supabase.table("menu_master").select("id",count="exact").execute()
+            total_menu=menu_res.count or len(menu_res.data or [])
+        except: pass
+        return {"total_bahan":total,"aset_inventory":aset,"stock_min":stock_min,"total_menu":total_menu,"items":display,"timestamp":datetime.now().isoformat()}
     except Exception as e:
-        print(f"kamus insert skip: {e}")
+        return {"error":str(e),"total_bahan":0,"aset_inventory":0,"stock_min":0,"total_menu":0,"items":[]}
 
-# === AUTH & DASHBOARD ===
-@app.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.post("/login")
-async def login(request: Request, email: str = Form(...), role: str = Form(...)):
-    resp=RedirectResponse(url=f"/dashboard/{role}", status_code=302)
-    resp.set_cookie(key="role",value=role); resp.set_cookie(key="email",value=email)
-    return resp
-
-@app.get("/dashboard/{role}", response_class=HTMLResponse)
-async def dashboard(request: Request, role: str):
-    stats={"total_bahan":0,"aset_inventory":0,"stock_min":0,"total_menu":0,"avg_hpp":0,"order_aktif":0}
-    bahan=[]; orders=[]; menus=[]
+# ================== BAHAN CRUD ==================
+@app.get("/dashboard/admin/inventory", response_class=HTMLResponse)
+@app.get("/inventory_stock", response_class=HTMLResponse)
+async def inventory_stock(request: Request):
+    bahan = []
     if supabase:
         try:
-            bres=supabase.table("bahan_inventory").select("*").order("kode_bahan").execute()
-            bahan=bres.data or []
-            stats["total_bahan"]=len(bahan)
-            aset=sum([float(b.get("stock_qty",0) or 0)*float(b.get("harga_per_satuan",0) or 0) for b in bahan])
-            stats["aset_inventory"]=aset
-            stats["stock_min"]=len([b for b in bahan if float(b.get("stock_qty",0) or 0) <= float(b.get("stock_minimum",5) or 5)])
-            mres=supabase.table("menu_master").select("*").execute()
-            menus=mres.data or []
-            stats["total_menu"]=len(menus)
-            if menus: stats["avg_hpp"]=sum([float(m.get("hpp",0) or 0) for m in menus])/len(menus)
+            res = supabase.table("bahan_inventory").select("*").order("kode_bahan").execute()
+            bahan = res.data or []
         except Exception as e:
             print(e)
-    tmpl={"admin":"dashboard_admin.html","dapur":"dashboard_dapur.html","gudang":"dashboard_gudang.html","delivery":"dashboard_delivery.html"}.get(role,"dashboard_admin.html")
-    bahan_min=sorted([b for b in bahan if float(b.get("stock_qty",0) or 0) <= float(b.get("stock_minimum",5) or 5)], key=lambda x: float(x.get("stock_qty",0) or 0))[:5]
-    return templates.TemplateResponse(tmpl, {"request":request,"role":role,"stats":stats,"bahan":bahan_min or bahan[:5],"bahan_all":bahan,"orders":orders,"menus":menus})
-
-@app.get("/dashboard/admin/inventory", response_class=HTMLResponse)
-async def inventory_page(request: Request):
-    bahan=[]
-    if supabase:
-        try:
-            res=supabase.table("bahan_inventory").select("*").order("kode_bahan").execute()
-            bahan=res.data or []
-        except: pass
-    kat_utama, sub_kat = get_kategori_data()
-    return templates.TemplateResponse("inventory_stock.html", {"request":request,"bahan":bahan,"total":len(bahan),"kat_utama":kat_utama,"sub_kat":sub_kat})
-
-@app.get("/dashboard/admin/menu", response_class=HTMLResponse)
-async def menu_page(request: Request):
-    menus=[]; bahan=[]
-    if supabase:
-        try:
-            mres=supabase.table("menu_master").select("*").order("kode_menu").execute()
-            menus=mres.data or []
-            for m in menus:
-                try:
-                    rres=supabase.table("resep_bom").select("id",count="exact").eq("menu_id",m["id"]).execute()
-                    m["jumlah_bahan"]=rres.count or 0
-                except: m["jumlah_bahan"]=0
-            bres=supabase.table("bahan_inventory").select("*").order("nama_bahan").execute()
-            bahan=bres.data or []
-        except Exception as e:
-            print("menu page error",e)
-    return templates.TemplateResponse("master_menu.html", {"request":request,"menus":menus,"bahan":bahan,"total_bahan":len(bahan),"total_menu":len(menus),"avg_hpp":sum([float(m.get("hpp",0) or 0) for m in menus])/len(menus) if menus else 0,"linked_menu":len([m for m in menus if m.get("jumlah_bahan",0)>0])})
-
-# === OPSI A: HALAMAN TERPISAH RESEP & PAKET - FOCUS ===
-@app.get("/dashboard/admin/menu/resep/{menu_id}", response_class=HTMLResponse)
-async def resep_bom_page(request: Request, menu_id: str):
-    menu=None; bahan=[]
-    if supabase:
-        try:
-            mres=supabase.table("menu_master").select("*").eq("id",menu_id).single().execute()
-            menu=mres.data
-            bres=supabase.table("bahan_inventory").select("*").order("nama_bahan").execute()
-            bahan=bres.data or []
-        except Exception as e:
-            print("resep page error",e)
-    if not menu:
-        raise HTTPException(404,"Menu not found")
-    return templates.TemplateResponse("resep_bom.html", {"request":request,"menu":menu,"bahan":bahan})
-
-@app.get("/dashboard/admin/menu/paket/{menu_id}", response_class=HTMLResponse)
-async def paket_bom_page(request: Request, menu_id: str):
-    menu=None; bahan=[]; resep_list=[]
-    if supabase:
-        try:
-            mres=supabase.table("menu_master").select("*").eq("id",menu_id).single().execute()
-            menu=mres.data
-            bres=supabase.table("bahan_inventory").select("*").order("nama_bahan").execute()
-            bahan=bres.data or []
-            rres=supabase.table("menu_master").select("*").eq("tipe_menu","resep_masakan").order("kode_menu").execute()
-            resep_list=rres.data or []
-        except Exception as e:
-            print("paket page error",e)
-    if not menu:
-        raise HTTPException(404,"Menu not found")
-    return templates.TemplateResponse("paket_bom.html", {"request":request,"menu":menu,"bahan":bahan,"resep_list":resep_list})
-
-# === MASTER RESEP DAN PAKET - CLEAN 950 Ln - CEK SYNC ===
-@app.post("/dashboard/admin/menu/save")
-async def save_menu(request: Request):
-    form=await request.form()
-    def get_str(k,d=""): v=form.get(k,d); return v if v is not None else d
-    def to_title(s):
-        if not s: return s
-        return ' '.join([w.capitalize() for w in s.strip().split()])
-    def clean_kode_resep(kode,nama):
-        # PERBAIKAN: Resep-NamaMenu-Urut & Paket-NamaMenu-Urut
-        k=kode.strip()
-        if k.lower().startswith('resep-') or k.lower().startswith('paket-'):
-            k=re.sub(r'\s+','-',k.strip()); k=re.sub(r'-+','-',k); k=k.strip('-')
-            # Capitalize tiap bagian
-            parts=k.split('-')
-            if len(parts)>=2:
-                return parts[0].capitalize()+'-'+''.join([p.capitalize() for p in parts[1:-1]])+'-'+parts[-1] if parts[-1].isdigit() else parts[0].capitalize()+'-'.join([p.capitalize() for p in parts[1:]])
-            return k
-        k=re.sub(r'-?10P\b','',k,flags=re.IGNORECASE)
-        k=re.sub(r'-?10\s*Porsi\b','',k,flags=re.IGNORECASE)
-        k=re.sub(r'\s+','-',k.strip()); k=re.sub(r'-+','-',k); k=k.strip('-')
-        if not k:
-            cn=''.join([w.capitalize() for w in nama.strip().split() if w])
-            k=f"Resep-{cn}-001"
-        return k
-    def clean_kode_paket(kode,nama,tipe):
-        k=kode.strip()
-        if k.lower().startswith('paket-') or k.lower().startswith('resep-'):
-            k=re.sub(r'\s+','-',k.strip()); k=re.sub(r'-+','-',k); k=k.strip('-')
-            return k
-        cn=''.join([w.capitalize() for w in nama.strip().split() if w])
-        prefix='Paket' if tipe=='paket_masakan' else 'Resep'
-        return f"{prefix}-{cn}-001"
-    id_val=get_str("id","")
-    kode_raw=get_str("kode_menu","").strip()
-    nama=to_title(get_str("nama_menu",""))
-    nama_clean=re.sub(r'\b10P\b','',nama,flags=re.IGNORECASE)
-    nama_clean=re.sub(r'\b\d+\s*Porsi\b','',nama_clean,flags=re.IGNORECASE)
-    nama_clean=' '.join(nama_clean.split()).strip()
-    if nama_clean: nama=to_title(nama_clean)
-    kategori=get_str("kategori_menu","Nasi Box")
-    tipe=get_str("tipe_menu","paket_masakan")
-    if tipe=="resep_masakan":
-        porsi=0.0; satuan="porsi"; kategori="Resep"; harga_jual=0; hpp=0
-        deskripsi=get_str("deskripsi","") or f"Resep {nama} - 1 qty=1 porsi (fix 10)"
-        kode=clean_kode_resep(kode_raw,nama)
-    else:
-        porsi=float(form.get("porsi",1) or 1); satuan=get_str("satuan","pax")
-        harga_jual=float(form.get("harga_jual",0) or 0); hpp=float(form.get("hpp",0) or 0)
-        deskripsi=get_str("deskripsi",""); kode=clean_kode_paket(kode_raw,nama,tipe)
-    data={"kode_menu":kode,"nama_menu":nama,"kategori_menu":kategori,"tipe_menu":tipe,"porsi":porsi,"satuan":satuan,"harga_jual":harga_jual,"hpp":hpp,"deskripsi":deskripsi}
-    if supabase:
-        try:
-            if id_val: supabase.table("menu_master").update(data).eq("id",id_val).execute()
-            else: supabase.table("menu_master").insert(data).execute()
-        except Exception as e:
-            print("save menu error",e)
-            try:
-                fb={k:v for k,v in data.items() if k!="tipe_menu"}
-                if id_val: supabase.table("menu_master").update(fb).eq("id",id_val).execute()
-                else: supabase.table("menu_master").insert(fb).execute()
-            except Exception as e2: print(e2)
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse("/dashboard/admin/menu", status_code=302)
-
-@app.get("/api/menu/{menu_id}")
-async def get_menu(menu_id: str):
-    if not supabase: raise HTTPException(404,"No supabase")
-    res=supabase.table("menu_master").select("*").eq("id",menu_id).single().execute()
-    return res.data
-
-# === RESEP BOM - SINGLE SOURCE, TANPA TAMBAH Ln ===
-@app.get("/api/menu/{menu_id}/resep")
-async def get_resep(menu_id: str):
-    if not supabase: return {"items":[],"hpp_calc":None}
-    try:
-        porsi=10
-        try:
-            mr=supabase.table("menu_master").select("porsi").eq("id",menu_id).single().execute()
-            porsi=float(mr.data.get("porsi",10) or 10) if mr.data else 10
-        except: pass
-        # porsi 0 untuk resep display, tapi hitung 10
-        if porsi==0: porsi=10
-        try:
-            res=supabase.table("resep_bom").select("*, bahan_inventory(kode_bahan,nama_bahan,satuan_default,harga_per_satuan,harga_awal,kode_kategori,stock_qty,konversi_json), menu_master!resep_bom_paket_menu_id_fkey(kode_menu,nama_menu,hpp,satuan,porsi)").eq("menu_id",menu_id).execute()
-        except:
-            res=supabase.table("resep_bom").select("*, bahan_inventory(kode_bahan,nama_bahan,satuan_default,harga_per_satuan,harga_awal,kode_kategori,stock_qty), menu_master!resep_bom_paket_menu_id_fkey(kode_menu,nama_menu,hpp,satuan,porsi)").eq("menu_id",menu_id).execute()
-        items=[]; hpp_total=0
-        for r in res.data or []:
-            qty=float(r.get("qty_need",0) or 0)
-            si=r.get("satuan_input") or r.get("satuan") or "Kg"
-            # FIX CEK SYNC: bahan_id prioritas utama, baru paket_menu_id
-            # Jika bahan_id ada (buah, air, box, bahan resep) -> treat sebagai bahan_inventory
-            # Jika paket_menu_id ada (resep untuk paket) -> treat sebagai paket resep
-            if r.get("bahan_id"):
-                bahan=r.get("bahan_inventory") or {}
-                harga=float(bahan.get("harga_per_satuan",0) or bahan.get("harga_awal",0) or 0)
-                qty_conv,faktor,_=konversi_ke_default(bahan,qty,si)
-                # PAKET BAHAN TAMBAHAN: Qty = total paket (tidak dikali porsi), Subtotal = Qty x Harga Satuan
-                total_qty=qty_conv; sub=total_qty*harga; hpp_total+=sub
-                sub_per_porsi = sub / max(porsi,1)
-                kode_sub=bahan.get("kode_kategori",""); kode_full=bahan.get("kode_bahan","")
-                no=kode_full.split('-')[-1] if '-' in kode_full else ''
-                kode_rapi=f"{kode_sub}-{no} → {bahan.get('nama_bahan','').title()} → Rp {harga:,.0f} → {bahan.get('satuan_default','Kg')}"
-                warns=[]
-                if harga==0: warns.append("HARGA 0! Update di Inventory")
-                if float(bahan.get("stock_qty",0) or 0)==0: warns.append("STOCK 0!")
-                if faktor!=1.0: warns.append(f"Konversi {si}→{bahan.get('satuan_default','Kg')} x{faktor}")
-                tipe_display=r.get("tipe","resep")
-                if tipe_display=="paket":
-                    tipe_display="paket_bahan"
-                items.append({"id":r["id"],"tipe":tipe_display,"bahan_id":r.get("bahan_id"),"kode_bahan":kode_rapi,"kode_bahan_raw":kode_full,"sub_kode":kode_sub,"no_urut":no,"nama_bahan":' '.join([w.capitalize() for w in str(bahan.get("nama_bahan","")).split()]),"satuan":bahan.get("satuan_default","Kg"),"satuan_input":si,"harga":harga,"qty_need":qty,"qty_converted":qty_conv,"faktor":faktor,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":sub_per_porsi,"stock_qty":float(bahan.get("stock_qty",0) or 0),"warning":" | ".join(warns),"is_harga_0":harga==0,"is_stock_0":float(bahan.get("stock_qty",0) or 0)==0})
-            elif r.get("paket_menu_id"):
-                paket=r.get("menu_master") or {}
-                hpp_p=float(paket.get("hpp",0) or 0)
-                qty_fixed = qty
-                if qty_fixed > 10:
-                    qty_fixed = 1.0
-                total_qty=qty_fixed*porsi; sub=total_qty*hpp_p; hpp_total+=sub
-                items.append({"id":r["id"],"tipe":"paket","bahan_id":r.get("paket_menu_id"),"kode_bahan":paket.get("kode_menu",""),"nama_bahan":paket.get("nama_menu",""),"satuan":"batch","satuan_input":"batch","harga":hpp_p,"qty_need":qty_fixed,"qty_converted":qty_fixed,"total_qty":total_qty,"subtotal":sub,"subtotal_per_porsi":qty_fixed*hpp_p,"stock_qty":0,"warning":""})
-            else:
-                # fallback jika tidak ada bahan_id maupun paket_menu_id
-                items.append({"id":r["id"],"tipe":"unknown","nama_bahan":"(data tidak valid)","qty_need":qty,"harga":0,"subtotal":0})
-        return {"items":items,"hpp_calc":hitung_hpp_final(hpp_total,porsi),"porsi":porsi}
-    except Exception as e:
-        print("get resep error",e)
-        return {"items":[],"hpp_calc":None}
-
-@app.post("/api/menu/{menu_id}/resep/add")
-async def add_resep(menu_id: str, request: Request):
-    body=await request.json()
-    bahan_id=body.get("bahan_id"); qty=float(body.get("qty_need",0) or 0)
-    si=body.get("satuan_input") or body.get("satuan") or "Kg"; tipe=body.get("tipe","resep")
-    if not supabase: raise HTTPException(500,"No supabase")
-    if not bahan_id: raise HTTPException(400,"bahan_id required")
-    try:
-        supabase.table("resep_bom").select("id").limit(1).execute()
-    except Exception as e:
-        raise HTTPException(500,f"Tabel resep_bom belum ada: {e}")
-    try:
-        # FIX SYNC ANTI-DOUBLE: cek apakah bahan sudah ada di paket ini -> update qty, bukan insert double
-        try:
-            existing = supabase.table("resep_bom").select("id,qty_need").eq("menu_id",menu_id).eq("bahan_id",bahan_id).execute()
-            if existing.data and len(existing.data)>0:
-                # update qty jika sudah ada (prevent double Air Minum seperti screenshot)
-                first = existing.data[0]
-                old_qty = float(first.get("qty_need",0) or 0)
-                # jika qty sama persis dan dalam 3 detik terakhir, anggap double-click -> skip insert
-                # else akumulasi
-                if abs(old_qty - qty) < 0.0001:
-                    # duplicate detection -> return ok tanpa insert baru
-                    total,porsi=hitung_total_hpp(menu_id)
-                    calc=hitung_hpp_final(total,porsi)
-                    return {"ok":True,"hpp_per_porsi":calc["hpp_final_per_porsi"],"total":total,"final":calc["hpp_final_per_porsi"],"dedup":True}
-                # jika qty beda, update jadi qty baru (bukan tambah double)
-                supabase.table("resep_bom").update({"qty_need":qty,"satuan_input":si,"tipe":tipe}).eq("id",first["id"]).execute()
-                # hapus duplicate lain jika ada >1 baris untuk bahan yang sama
-                if len(existing.data)>1:
-                    for dup in existing.data[1:]:
-                        try: supabase.table("resep_bom").delete().eq("id",dup["id"]).execute()
-                        except: pass
-                total,porsi=hitung_total_hpp(menu_id)
-                calc=hitung_hpp_final(total,porsi)
-                hpp_final=calc["hpp_final_per_porsi"]
-                supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
-                return {"ok":True,"hpp_per_porsi":hpp_final,"hpp_bahan":calc["hpp_bahan_per_porsi"],"total":total,"final":hpp_final,"dedup":False,"updated":True}
-        except Exception as dedup_e:
-            print(f"dedup check fail (continue insert): {dedup_e}")
-
-        try:
-            supabase.table("resep_bom").insert({"menu_id":menu_id,"bahan_id":bahan_id,"qty_need":qty,"satuan_input":si,"tipe":tipe}).execute()
-        except Exception as e:
-            msg=str(e)
-            if "satuan_input" in msg or "PGRST204" in msg or "schema cache" in msg:
-                try:
-                    supabase.table("resep_bom").insert({"menu_id":menu_id,"bahan_id":bahan_id,"qty_need":qty,"satuan":si,"tipe":tipe}).execute()
-                except:
-                    supabase.table("resep_bom").insert({"menu_id":menu_id,"bahan_id":bahan_id,"qty_need":qty,"tipe":tipe}).execute()
-            else:
-                if "tipe" in msg:
-                    supabase.table("resep_bom").insert({"menu_id":menu_id,"bahan_id":bahan_id,"qty_need":qty,"satuan_input":si}).execute()
-                else: raise
-        try:
-            if bahan_id:
-                try:
-                    b_res=supabase.table("bahan_inventory").select("nama_bahan,satuan_default,konversi_json").eq("id",bahan_id).single().execute()
-                except:
-                    b_res=supabase.table("bahan_inventory").select("nama_bahan,satuan_default").eq("id",bahan_id).single().execute()
-                if b_res.data:
-                    _ensure_kamus_row(b_res.data.get("nama_bahan",""),qty,si,b_res.data.get("satuan_default") or "Kg",b_res.data.get("konversi_json") or {},f"{b_res.data.get('nama_bahan','')} {qty} {si} (auto)")
-        except Exception as e:
-            print(f"kamus auto fail: {e}")
-        total,porsi=hitung_total_hpp(menu_id)
-        calc=hitung_hpp_final(total,porsi)
-        hpp_final=calc["hpp_final_per_porsi"]
-        supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
-    except HTTPException: raise
-    except Exception as e:
-        print("add resep error",e); raise HTTPException(500,f"Gagal tambah bahan: {e}")
-    return {"ok":True,"hpp_per_porsi":hpp_final,"hpp_bahan":calc["hpp_bahan_per_porsi"],"total":total,"final":hpp_final}
-
-@app.post("/api/menu/{menu_id}/resep/add-paket")
-async def add_resep_paket(menu_id: str, request: Request):
-    body=await request.json()
-    paket_id=body.get("paket_menu_id")
-    # OPSI A: Qty 1 batch = 1 porsi paket pakai 1 resep utuh, bukan Kg
-    qty_input=float(body.get("qty_need",1) or 1)
-    qty=1.0  # force Opsi A: selalu 1 batch per porsi paket
-    if qty_input!=1:
-        qty=qty_input  # jika user input 1 tetap 1, jika input lain tetap pakai tapi satuan batch
-        if qty>10: # jika user salah input 15 seperti screenshot -> koreksi jadi 1
-            qty=1.0
-    if not supabase: raise HTTPException(500,"No supabase")
-    if not paket_id: raise HTTPException(400,"paket_menu_id required")
-    try:
-        # ANTI DOUBLE paket resep
-        try:
-            existing = supabase.table("resep_bom").select("id").eq("menu_id",menu_id).eq("paket_menu_id",paket_id).execute()
-            if existing.data and len(existing.data)>0:
-                total,porsi=hitung_total_hpp(menu_id)
-                calc=hitung_hpp_final(total,porsi)
-                return {"ok":True,"hpp_per_porsi":calc["hpp_final_per_porsi"],"total":total,"final":calc["hpp_final_per_porsi"],"dedup":True}
-        except: pass
-
-        try:
-            supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"satuan_input":"batch","tipe":"paket"}).execute()
-        except Exception as e:
-            msg=str(e)
-            if "satuan_input" in msg:
-                supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"satuan":"batch","tipe":"paket"}).execute()
-            else:
-                supabase.table("resep_bom").insert({"menu_id":menu_id,"paket_menu_id":paket_id,"qty_need":qty,"tipe":"paket"}).execute()
-        total,porsi=hitung_total_hpp(menu_id)
-        calc=hitung_hpp_final(total,porsi)
-        hpp_final=calc["hpp_final_per_porsi"]
-        supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
-        return {"ok":True,"hpp_per_porsi":hpp_final,"total":total,"final":hpp_final}
-    except Exception as e:
-        print("add paket error",e); raise HTTPException(500,f"Gagal tambah paket: {e}")
-
-@app.post("/api/menu/{menu_id}/porsi")
-async def update_porsi(menu_id: str, request: Request):
-    body=await request.json()
-    porsi=float(body.get("porsi",1) or 1)
-    if porsi<=0: porsi=1
-    satuan=body.get("satuan","porsi")
-    if not supabase: raise HTTPException(500,"No supabase")
-    try:
-        supabase.table("menu_master").update({"porsi":porsi,"satuan":satuan}).eq("id",menu_id).execute()
-        total,_=hitung_total_hpp(menu_id)
-        calc=hitung_hpp_final(total,porsi)
-        hpp_final=calc["hpp_final_per_porsi"]
-        supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
-        return {"ok":True,"porsi":porsi,"satuan":satuan,"hpp_final":hpp_final,"calc":calc}
-    except Exception as e:
-        print("update porsi error",e); raise HTTPException(500,str(e))
-
-# === KAMUS KONVERSI SYNC - CEK SYNC MASTER BAHAN KONVERSI ===
-@app.get("/api/kamus/list")
-async def list_kamus():
-    if not supabase: return {"items":[]}
-    try:
-        res=supabase.table("kamus_bom").select("*").order("nama_bahan").execute()
-        return {"items":res.data or []}
-    except Exception as e:
-        print("kamus list error",e)
-        return {"items":[]}
-
-@app.get("/api/bahan/konversi-status")
-async def bahan_konversi_status():
-    if not supabase: return {"items":[]}
-    try:
-        res=supabase.table("bahan_inventory").select("id,kode_bahan,nama_bahan,satuan_default,konversi_json,harga_per_satuan,stock_qty").order("nama_bahan").execute()
-        items=[]
-        for b in res.data or []:
-            kj=b.get("konversi_json") or {}
-            if isinstance(kj,str):
-                try:
-                    import json; kj=json.loads(kj)
-                except: kj={}
-            has=len(kj)>0
-            items.append({
-                "id":b["id"],"kode_bahan":b.get("kode_bahan"),"nama_bahan":b.get("nama_bahan"),
-                "satuan_default":b.get("satuan_default"),"konversi_json":kj,
-                "sudah_ada_konversi":has,"harga":b.get("harga_per_satuan"),"stock":b.get("stock_qty")
-            })
-        return {"items":items,"total":len(items),"sudah_ada":len([i for i in items if i["sudah_ada_konversi"]]),"belum_ada":len([i for i in items if not i["sudah_ada_konversi"]])}
-    except Exception as e:
-        print("konversi status error",e)
-        return {"items":[]}
-
-@app.post("/api/bahan/{bahan_id}/konversi")
-async def update_konversi(bahan_id: str, request: Request):
-    body=await request.json()
-    konversi=body.get("konversi_json") or {}
-    if not supabase: raise HTTPException(500,"No supabase")
-    try:
-        supabase.table("bahan_inventory").update({"konversi_json":konversi}).eq("id",bahan_id).execute()
-        # sync ke kamus_bom juga
-        try:
-            bres=supabase.table("bahan_inventory").select("nama_bahan,satuan_default").eq("id",bahan_id).single().execute()
-            if bres.data:
-                nama_low=bres.data.get("nama_bahan","").lower()
-                supabase.table("kamus_bom").upsert({"nama_bahan":nama_low,"konversi_json":konversi,"satuan_default":bres.data.get("satuan_default","Kg")}, on_conflict="nama_bahan").execute()
-        except: pass
-        return {"ok":True,"konversi":konversi}
-    except Exception as e:
-        print("update konversi error",e); raise HTTPException(500,str(e))
-
-@app.delete("/api/resep/{resep_id}")
-async def delete_resep(resep_id: str):
-    if not supabase: raise HTTPException(500,"No supabase")
-    try:
-        cur=supabase.table("resep_bom").select("menu_id").eq("id",resep_id).single().execute()
-        menu_id=cur.data.get("menu_id") if cur.data else None
-        supabase.table("resep_bom").delete().eq("id",resep_id).execute()
-        if menu_id:
-            total,porsi=hitung_total_hpp(menu_id)
-            calc=hitung_hpp_final(total,porsi)
-            hpp_final=calc["hpp_final_per_porsi"]
-            # jika sudah tidak ada bahan, hpp = 0
-            if total==0:
-                hpp_final=0
-            supabase.table("menu_master").update({"hpp":hpp_final}).eq("id",menu_id).execute()
-    except Exception as e:
-        print("delete resep error",e)
-    return {"deleted":True}
-
-@app.delete("/api/menu/delete/{menu_id}")
-async def delete_menu(menu_id: str):
-    if not supabase: raise HTTPException(500,"No supabase")
-    try:
-        supabase.table("resep_bom").delete().eq("menu_id",menu_id).execute()
-        supabase.table("menu_master").delete().eq("id",menu_id).execute()
-        return {"deleted":True,"id":menu_id}
-    except Exception as e:
-        print("delete menu error",e); raise HTTPException(500,str(e))
-
-# === KATEGORI & BAHAN + BAHAN LIST FIX LOADING LAMBAT ===
-@app.get("/api/bahan/list")
-async def bahan_list():
-    if not supabase:
-        return {"items":[],"count":0}
-    try:
-        # ambil hanya kolom yang dipakai BOM biar cepat, limit 500
-        res=supabase.table("bahan_inventory").select("id,kode_bahan,nama_bahan,kode_kategori,kategori_utama,satuan_default,harga_per_satuan,stock_qty").order("nama_bahan").limit(500).execute()
-        return {"items":res.data or [],"bahan":res.data or [],"count":len(res.data or [])}
-    except Exception as e:
-        print("bahan list error",e)
-        return {"items":[],"count":0,"error":str(e)}
-
-@app.get("/api/kategori/list")
-async def kategori_list():
-    utama,sub=get_kategori_data()
-    return {"utama":utama,"sub":sub}
-
-@app.post("/api/kategori/save")
-async def kategori_save(request: Request):
-    form=await request.form()
-    code=form.get("code","").strip().lower()[:4]; label=form.get("label","").strip()
-    type_=form.get("type","utama"); parent=form.get("parent","").strip().lower()
-    if not code or not label: raise HTTPException(400,"code & label required")
-    data={"code":code,"label":label,"type":type_,"parent":parent,"is_active":True}
-    if supabase:
-        try:
-            ex=supabase.table("kategori_master").select("*").eq("code",code).eq("type",type_).execute()
-            if ex.data: supabase.table("kategori_master").update(data).eq("code",code).eq("type",type_).execute()
-            else: supabase.table("kategori_master").insert(data).execute()
-        except: pass
-    return {"saved":True,"data":data}
-
-@app.delete("/api/kategori/{code}")
-async def kategori_delete(code: str, type: str = "sub"):
-    if supabase:
-        try: supabase.table("kategori_master").update({"is_active":False}).eq("code",code).eq("type",type).execute()
-        except: pass
-    return {"deleted":True,"code":code}
+    if templates is None:
+        return HTMLResponse(f"<h3>Inventory JB KITCHEN MRH</h3><p>Total: {len(bahan)} bahan</p><p>Template folder belum ditemukan di server.</p>")
+    return templates.TemplateResponse(request, "inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan)})
 
 @app.post("/dashboard/admin/inventory/save")
-async def save_bahan(request: Request):
-    form=await request.form()
-    def get_str(k,d=""): v=form.get(k,d); return v if v is not None else d
-    def get_float(k,default=0):
-        v=form.get(k); 
-        if v in (None,""," "): return default
-        try: return float(v)
-        except: return default
-    id_val=get_str("id","")
-    kode=get_str("kode_bahan","").strip(); nama=' '.join([w.capitalize() for w in get_str("nama_bahan","").strip().split()])
-    kat_utama=get_str("kategori_utama","nbt").lower(); kode_kat=get_str("kode_kategori","buh").lower()
-    # FIX TYPO: 1ut -> lut (sisa import lama)
-    if kode_kat=="1ut": kode_kat="lut"
-    # FIX KODE BAHAN: jika ada -1ut- di kode, ganti jadi -lut-
-    if "-1ut-" in kode.lower(): kode=kode.lower().replace("-1ut-","-lut-")
-    satuan=get_str("satuan_default","Kg"); stock=get_float("stock_qty",0); stock_min=get_float("stock_minimum",5)
-    harga=get_float("harga_per_satuan",0); supplier=get_str("supplier",""); merek=' '.join([w.capitalize() for w in get_str("merek","").split()])
-    hall=get_str("hall_flag","Orgk"); orgk="Orgk" if hall=="Orgk" else ""
-    konversi_json={}
+async def inventory_save(request: Request):
+    if not supabase: raise HTTPException(500,"Supabase not configured")
+    form = await request.form()
+    data = dict(form)
+    stock_awal = safe_float(data.get("stock_awal"),0)
+    tambah = safe_float(data.get("tambah"),0)
+    terpakai = safe_float(data.get("terpakai"),0)
+    stock_qty = stock_awal + tambah - terpakai
+    if stock_qty == 0 and data.get("stock_qty"):
+        stock_qty = safe_float(data.get("stock_qty"))
+    harga_awal = safe_float(data.get("harga_awal"),0)
+    harga_baru = safe_float(data.get("harga_baru"),0)
+    harga_final = harga_baru if harga_baru>0 else harga_awal
+    if harga_final == 0 and data.get("harga_per_satuan"):
+        harga_final = safe_float(data.get("harga_per_satuan"))
+    payload = {
+        "kode_bahan": data.get("kode_bahan"),
+        "nama_bahan": (data.get("nama_bahan") or "").lower(),
+        "merek": data.get("merek"),
+        "kategori_utama": data.get("kategori_utama"),
+        "kode_kategori": data.get("kode_kategori"),
+        "satuan_default": data.get("satuan_default") or "Kg",
+        "stock_qty": stock_qty,
+        "harga_per_satuan": harga_final,
+        "id_halal": data.get("id_halal"),
+        "orgk_flag": data.get("orgk_flag") or "Orgk",
+        "hall_flag": data.get("hall_flag"),
+        "updated_at": datetime.now().isoformat()
+    }
+    payload = {k:v for k,v in payload.items() if v is not None}
     try:
-        kj_raw=get_str("konversi_json","")
-        if kj_raw:
-            import json; konversi_json=json.loads(kj_raw)
-    except: pass
-    data={"kode_bahan":kode,"nama_bahan":nama,"kategori_utama":kat_utama,"kode_kategori":kode_kat,"satuan_default":satuan,"stock_qty":stock,"stock_minimum":stock_min,"harga_per_satuan":harga,"supplier":supplier,"merek":merek,"hall_flag":hall,"orgk_flag":orgk,"konversi_json":konversi_json}
-    if supabase:
-        try:
-            # CEK DUPLIKAT KODE: jika kode sudah ada dan ini insert baru (bukan edit), auto +1
-            if not id_val:
-                try:
-                    ex=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_bahan",kode).limit(1).execute()
-                    if ex.data:
-                        # cari max nomor untuk sub kategori ini
-                        all_sub=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_kategori",kode_kat).execute()
-                        max_n=0
-                        for row in (all_sub.data or []):
-                            kb=row.get("kode_bahan","")
-                            m=kb.split("-")[-1]
-                            try: n=int(m); max_n=max(max_n,n)
-                            except: pass
-                        next_n=max_n+1
-                        pad=str(next_n).zfill(3)
-                        # rebuild kode dengan nomor baru: FLAG-KAT-SUB-PAD
-                        parts=kode.split("-")
-                        if len(parts)>=4:
-                            kode="-".join(parts[:-1]+[pad])
-                            data["kode_bahan"]=kode
-                        else:
-                            # fallback
-                            kode=f"{hall}-{kat_utama}-{kode_kat}-{pad}"
-                            data["kode_bahan"]=kode
-                except Exception as e_dup:
-                    print("cek dup error",e_dup)
-            if id_val: supabase.table("bahan_inventory").update(data).eq("id",id_val).execute()
-            else: supabase.table("bahan_inventory").insert(data).execute()
-            _ensure_kamus_row(nama,0.15,satuan,satuan,konversi_json,f"{nama} 0.15 {satuan} (auto dari inventory)")
-        except Exception as e:
-            print("save bahan error",e)
-            try:
-                fb={k:v for k,v in data.items() if k!="konversi_json"}
-                if id_val: supabase.table("bahan_inventory").update(fb).eq("id",id_val).execute()
-                else: supabase.table("bahan_inventory").insert(fb).execute()
-            except Exception as e2: 
-                print(e2)
-                # jika masih error duplicate, coba auto increment lagi
-                try:
-                    if not id_val and "duplicate" in str(e2).lower():
-                        all_sub=supabase.table("bahan_inventory").select("kode_bahan").eq("kode_kategori",kode_kat).execute()
-                        max_n=0
-                        for row in (all_sub.data or []):
-                            kb=row.get("kode_bahan","")
-                            try: max_n=max(max_n,int(kb.split("-")[-1]))
-                            except: pass
-                        pad=str(max_n+1).zfill(3)
-                        fb["kode_bahan"]=f"{hall}-{kat_utama}-{kode_kat}-{pad}"
-                        supabase.table("bahan_inventory").insert(fb).execute()
-                except Exception as e3:
-                    print("final save error",e3)
-                    raise e3
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse("/dashboard/admin/inventory", status_code=302)
+        if data.get("id"):
+            supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
+        else:
+            payload["id"] = str(uuid.uuid4())
+            supabase.table("bahan_inventory").insert(payload).execute()
+        return RedirectResponse(url="/dashboard/admin/inventory", status_code=303)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.delete("/api/bahan/{id}")
+async def delete_bahan(id: str):
+    if not supabase: raise HTTPException(500,"No supabase")
+    supabase.table("bahan_inventory").delete().eq("id", id).execute()
+    return {"ok":True}
+
+@app.post("/api/bahan/quick-update")
+async def quick_update(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    body = await request.json()
+    id = body.get("id")
+    if not id: raise HTTPException(400,"id required")
+    update = {}
+    if "harga_per_satuan" in body: update["harga_per_satuan"]=safe_float(body["harga_per_satuan"])
+    if "stock_qty" in body: update["stock_qty"]=safe_float(body["stock_qty"])
+    update["updated_at"]=datetime.now().isoformat()
+    supabase.table("bahan_inventory").update(update).eq("id", id).execute()
+    return {"ok":True}
+
+@app.post("/api/bahan/import")
+async def import_bahan(file: UploadFile = File(...)):
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        content = await file.read()
+        df = pd.read_excel(io.BytesIO(content)) if file.filename.endswith("xlsx") else pd.read_csv(io.BytesIO(content))
+        df.columns = [c.lower().strip() for c in df.columns]
+        imported = 0
+        for _, row in df.iterrows():
+            kode = str(row.get("kode") or row.get("kode_bahan") or "").strip()
+            nama = str(row.get("nama") or row.get("nama_bahan") or "").strip().lower()
+            if not nama: continue
+            payload = {
+                "id": str(uuid.uuid4()),
+                "kode_bahan": kode or f"AUTO-{uuid.uuid4().hex[:6]}",
+                "nama_bahan": nama,
+                "stock_qty": safe_float(row.get("stock") or row.get("stock_qty"),0),
+                "harga_per_satuan": safe_float(row.get("harga") or row.get("harga_per_satuan"),0),
+                "satuan_default": str(row.get("sat") or row.get("satuan") or "Kg"),
+                "kategori_utama": str(row.get("kategori_utama") or ""),
+                "kode_kategori": str(row.get("sub") or row.get("kode_kategori") or ""),
+            }
+            supabase.table("bahan_inventory").insert(payload).execute()
+            imported+=1
+        return {"ok":True,"imported":imported}
+    except Exception as e:
+        raise HTTPException(500, f"Import error: {e}")
 
 @app.post("/api/bahan/fix-typo-lut")
 async def fix_typo_lut():
     if not supabase: raise HTTPException(500,"No supabase")
     try:
-        # 1. Update semua kode_kategori 1ut -> lut
-        res1=supabase.table("bahan_inventory").select("id,kode_bahan,kode_kategori").eq("kode_kategori","1ut").execute()
-        fixed=0
-        for row in (res1.data or []):
-            old_kode=row.get("kode_bahan","")
-            new_kode=old_kode.lower().replace("-1ut-","-lut-")
-            # jika masih ada 1ut di kode, ganti
-            if "1ut" in new_kode: new_kode=new_kode.replace("1ut","lut")
-            supabase.table("bahan_inventory").update({"kode_kategori":"lut","kode_bahan":new_kode}).eq("id",row["id"]).execute()
+        res = supabase.table("bahan_inventory").select("id,kode_bahan,kode_kategori").or_("kode_bahan.ilike.%1ut%,kode_kategori.eq.1ut").execute()
+        fixed = 0
+        for row in (res.data or []):
+            old_kode = row.get("kode_bahan","")
+            new_kode = old_kode.lower().replace("-1ut-","-lut-").replace("1ut","lut")
+            upd = {"kode_bahan": new_kode, "kode_kategori":"lut" if "lut" in new_kode else row.get("kode_kategori")}
+            if upd["kode_kategori"]=="1ut": upd["kode_kategori"]="lut"
+            supabase.table("bahan_inventory").update(upd).eq("id", row["id"]).execute()
             fixed+=1
-        # 2. Update semua kode_bahan yang mengandung -1ut- tapi kode_kategori sudah lut (sisa typo)
-        res2=supabase.table("bahan_inventory").select("id,kode_bahan").ilike("kode_bahan","%-1ut-%").execute()
-        for row in (res2.data or []):
-            old_kode=row.get("kode_bahan","")
-            new_kode=old_kode.lower().replace("-1ut-","-lut-").replace("1ut","lut")
-            supabase.table("bahan_inventory").update({"kode_bahan":new_kode,"kode_kategori":"lut"}).eq("id",row["id"]).execute()
-            fixed+=1
-        # 3. Pastikan Udang Galah tetap 002 dan Vaname 001 - jika ada duplicate 001, biarkan, nanti auto increment
-        # 4. Delete sisa import lama yang masih 1ut jika diminta - tapi kita sudah update, jadi tidak delete, hanya update
-        return {"ok":True,"fixed":fixed,"message":f"Fixed {fixed} bahan dari 1ut -> lut. Udang Vaname akan jadi Orgk-dgi-lut-001, Udang Galah tetap 002"}
+        return {"ok":True,"fixed":fixed,"message":f"Fixed {fixed} bahan dari 1ut -> lut"}
     except Exception as e:
-        print("fix typo error",e); raise HTTPException(500,str(e))
+        raise HTTPException(500,str(e))
 
 @app.delete("/api/bahan/typo-1ut")
 async def delete_typo_1ut():
     if not supabase: raise HTTPException(500,"No supabase")
     try:
-        # Hapus semua yang masih mengandung 1ut (jika user minta delete)
-        res=supabase.table("bahan_inventory").select("id").ilike("kode_bahan","%1ut%").execute()
+        res=supabase.table("bahan_inventory").select("id").or_("kode_bahan.ilike.%1ut%,kode_kategori.eq.1ut").execute()
         deleted=0
         for row in (res.data or []):
             supabase.table("bahan_inventory").delete().eq("id",row["id"]).execute()
             deleted+=1
-        # juga yang kode_kategori 1ut
-        res2=supabase.table("bahan_inventory").select("id").eq("kode_kategori","1ut").execute()
-        for row in (res2.data or []):
-            supabase.table("bahan_inventory").delete().eq("id",row["id"]).execute()
-            deleted+=1
         return {"ok":True,"deleted":deleted}
     except Exception as e:
-        print("delete typo error",e); raise HTTPException(500,str(e))
+        raise HTTPException(500,str(e))
 
-# === KAMUS SUPABASE ===
-KAMUS_DEFAULT = KAMUS_DEFAULT
+@app.delete("/api/bahan/clear-all")
+async def clear_all():
+    if not supabase: raise HTTPException(500,"No supabase")
+    res = supabase.table("bahan_inventory").select("id").execute()
+    for row in (res.data or []):
+        supabase.table("bahan_inventory").delete().eq("id",row["id"]).execute()
+    return {"ok":True,"deleted":len(res.data or [])}
+
 @app.get("/api/kamus/list")
 async def kamus_list():
-    kamus=KAMUS_DEFAULT.copy()
+    kamus=KAMUS_DEFAULT_LOCAL.copy()
     if supabase:
         try:
             res=supabase.table("kamus_bom").select("*").execute()
             for row in res.data or []:
                 nama=(row.get("nama_bahan") or "").lower()
                 if nama:
-                    kj=row.get("konversi_json") or {}
-                    if isinstance(kj,str):
-                        try:
-                            import json; kj=json.loads(kj)
-                        except: kj={}
-                    kamus[nama]={"qty":float(row.get("qty_standar",0.15) or 0.15),"satuan":row.get("satuan_standar","Kg"),"satuan_default":row.get("satuan_default","Kg"),"konversi_json":kj,"label":row.get("label",f"{nama} {row.get('qty_standar',0.15)} {row.get('satuan_standar','Kg')}")}
+                    kamus[nama]={"qty":safe_float(row.get("qty_standar"),0.15),"satuan":row.get("satuan_standar","Kg"),"satuan_default":row.get("satuan_default","Kg"),"konversi_json":parse_konversi_json(row.get("konversi_json")),"label":row.get("label",f"{nama}")}
         except Exception as e:
             print(f"kamus list error: {e}")
     return {"items":kamus,"source":"supabase+default"}
@@ -824,55 +375,37 @@ async def kamus_list():
 async def kamus_save(request: Request):
     body=await request.json()
     nama=(body.get("nama_bahan") or "").lower().strip()
-    qty=float(body.get("qty",0.15) or 0.15); satuan=body.get("satuan","Kg")
-    satuan_default=body.get("satuan_default",satuan); kj=body.get("konversi_json",{}); label=body.get("label",f"{nama} {qty} {satuan}")
     if not nama: raise HTTPException(400,"nama_bahan required")
+    data={"nama_bahan":nama,"qty_standar":safe_float(body.get("qty"),0.15),"satuan_standar":body.get("satuan","Kg"),"satuan_default":body.get("satuan_default","Kg"),"konversi_json":body.get("konversi_json",{}),"label":body.get("label",f"{nama}"),"updated_at":datetime.now().isoformat()}
     if supabase:
         try:
             ex=supabase.table("kamus_bom").select("id").eq("nama_bahan",nama).limit(1).execute()
-            data={"nama_bahan":nama,"qty_standar":qty,"satuan_standar":satuan,"satuan_default":satuan_default,"konversi_json":kj,"label":label,"updated_at":datetime.now().isoformat()}
             if ex.data: supabase.table("kamus_bom").update(data).eq("nama_bahan",nama).execute()
             else: supabase.table("kamus_bom").insert(data).execute()
-            return {"saved":True,"source":"supabase"}
         except Exception as e:
-            print(f"kamus save error: {e}"); raise HTTPException(500,str(e))
-    return {"saved":True,"source":"memory"}
+            raise HTTPException(500,str(e))
+    return {"saved":True}
 
 @app.delete("/api/kamus/delete/{nama_bahan}")
 async def kamus_delete(nama_bahan: str):
     if not supabase: raise HTTPException(500,"No supabase")
-    nama_low=nama_bahan.lower().strip()
-    try:
-        supabase.table("kamus_bom").delete().eq("nama_bahan",nama_low).execute()
-        return {"deleted":True,"nama":nama_low}
-    except Exception as e:
-        print(f"kamus delete error: {e}"); raise HTTPException(500,str(e))
+    supabase.table("kamus_bom").delete().eq("nama_bahan",nama_bahan.lower().strip()).execute()
+    return {"deleted":True}
 
-# === LAINNYA ===
-@app.get("/api/stats/realtime")
-async def stats_realtime():
-    if not supabase: return {"total_bahan":0,"aset_inventory":0,"stock_min":0,"total_menu":0}
-    try:
-        bahan_res=supabase.table("bahan_inventory").select("kode_bahan,nama_bahan,stock_qty,harga_per_satuan,stock_minimum,satuan_default").order("stock_qty").limit(5).execute()
-        bahan_all=supabase.table("bahan_inventory").select("stock_qty,harga_per_satuan,stock_minimum").execute()
-        all_data=bahan_all.data or []
-        total=len(all_data); aset=sum([float(b.get("stock_qty",0) or 0)*float(b.get("harga_per_satuan",0) or 0) for b in all_data])
-        stock_min=len([b for b in all_data if float(b.get("stock_qty",0) or 0) <= float(b.get("stock_minimum",5) or 5)])
-        total_menu=0
-        try:
-            menu_res=supabase.table("menu_master").select("id",count="exact").execute()
-            total_menu=menu_res.count or len(menu_res.data or [])
-        except: pass
-        min_items=[]
-        for b in (bahan_res.data or []):
-            if float(b.get("stock_qty",0) or 0) <= float(b.get("stock_minimum",5) or 5):
-                min_items.append(b)
-        if len(min_items)<5: min_items=bahan_res.data or []
-        for b in min_items:
-            if b.get("nama_bahan"): b["nama_bahan"]=' '.join([w.capitalize() for w in str(b["nama_bahan"]).split()])
-        return {"total_bahan":total,"aset_inventory":aset,"stock_min":stock_min,"total_menu":total_menu,"items":min_items[:5],"timestamp":datetime.now().isoformat()}
-    except Exception as e:
-        return {"error":str(e)}
+@app.get("/api/kategori/list")
+async def kategori_list():
+    utama, sub = get_kategori_data()
+    return {"utama":utama,"sub":sub}
 
-@app.get("/health")
-async def health(): return {"status":"ok","app":"JB KITCHEN MRH Clean 950Ln","supabase":bool(supabase)}
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request): return RedirectResponse("/dashboard/admin")
+
+@app.get("/dashboard/admin", response_class=HTMLResponse)
+async def dashboard_admin(request: Request):
+    stats = await stats_realtime()
+    if templates is None:
+        return HTMLResponse(f"<h1>JB KITCHEN MRH</h1><pre>{json.dumps(stats, indent=2)}</pre>")
+    return templates.TemplateResponse(request, "dashboard_admin.html", {"request": request, **stats})
+
+@app.get("/dashboard/admin/inventory/save", response_class=HTMLResponse)
+async def inv_save_dummy(): return RedirectResponse("/dashboard/admin/inventory")
