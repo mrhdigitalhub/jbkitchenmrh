@@ -471,8 +471,7 @@ async def dashboard_admin(request: Request):
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print(f"[ADMIN CRASH] {e}
-{tb}")
+        print(f"[ADMIN CRASH] {e} - {tb}")
         return HTMLResponse(f"<h1>JB KITCHEN MRH - ERROR DEBUG</h1><h3>Error: {e}</h3><pre>{tb}</pre>", status_code=500)
 
 @app.get("/dashboard/admin/inventory/save", response_class=HTMLResponse)
