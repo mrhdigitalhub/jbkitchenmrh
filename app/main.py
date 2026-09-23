@@ -260,30 +260,48 @@ async def inventory_save(request: Request):
     harga_final = harga_baru if harga_baru>0 else harga_awal
     if harga_final == 0 and data.get("harga_per_satuan"):
         harga_final = safe_float(data.get("harga_per_satuan"))
+    # PAYLOAD 100% SESUAI SCHEMA SUPABASE ASLI (tanpa updated_at)
+    # Kolom yang ada: stock_awal, tambah_stock, stock_terpakai, harga_awal, harga_baru, aset_value, created_at
+    aset_value = stock_qty * harga_final if stock_qty and harga_final else 0
     payload = {
         "kode_bahan": data.get("kode_bahan"),
         "nama_bahan": (data.get("nama_bahan") or "").lower(),
         "merek": data.get("merek"),
+        "produsen": data.get("produsen"),
+        "supplier": data.get("supplier"),
         "kategori_utama": data.get("kategori_utama"),
         "kode_kategori": data.get("kode_kategori"),
         "satuan_default": data.get("satuan_default") or "Kg",
         "stock_qty": stock_qty,
+        "stock_awal": stock_awal,
+        "tambah_stock": tambah,
+        "stock_terpakai": terpakai,
         "harga_per_satuan": harga_final,
+        "harga_awal": harga_awal if harga_awal > 0 else None,
+        "harga_baru": harga_baru if harga_baru > 0 else None,
+        "aset_value": aset_value,
         "id_halal": data.get("id_halal"),
         "orgk_flag": data.get("orgk_flag") or "Orgk",
         "hall_flag": data.get("hall_flag"),
-        "updated_at": datetime.now().isoformat()
+        "no_hp": data.get("no_hp"),
+        "alamat_supplier": data.get("alamat_supplier"),
     }
-    payload = {k:v for k,v in payload.items() if v is not None}
-    try:
+    # Hapus None dan string kosong biar tidak kirim null yang tidak perlu
+    payload = {k:v for k,v in payload.items() if v is not None and v != ""}
+    def try_save(p):
         if data.get("id"):
-            supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
+            return supabase.table("bahan_inventory").update(p).eq("id", data.get("id")).execute()
         else:
-            payload["id"] = str(uuid.uuid4())
-            supabase.table("bahan_inventory").insert(payload).execute()
+            p["id"] = str(uuid.uuid4())
+            return supabase.table("bahan_inventory").insert(p).execute()
+    try:
+        try_save(payload)
         return RedirectResponse(url="/dashboard/admin/inventory", status_code=303)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        # Jika masih error schema cache, coba hapus field yang baru dan retry
+        msg = str(e)
+        print(f"[SAVE ERROR] {msg} | payload: {payload}")
+        raise HTTPException(500, f"Supabase error: {msg}")
 
 @app.delete("/api/bahan/{id}")
 async def delete_bahan(id: str):
@@ -300,7 +318,7 @@ async def quick_update(request: Request):
     update = {}
     if "harga_per_satuan" in body: update["harga_per_satuan"]=safe_float(body["harga_per_satuan"])
     if "stock_qty" in body: update["stock_qty"]=safe_float(body["stock_qty"])
-    update["updated_at"]=datetime.now().isoformat()
+    # updated_at tidak ada di schema - pakai created_at bawaan, jadi tidak usah update
     supabase.table("bahan_inventory").update(update).eq("id", id).execute()
     return {"ok":True}
 
@@ -389,7 +407,7 @@ async def kamus_save(request: Request):
     body=await request.json()
     nama=(body.get("nama_bahan") or "").lower().strip()
     if not nama: raise HTTPException(400,"nama_bahan required")
-    data={"nama_bahan":nama,"qty_standar":safe_float(body.get("qty"),0.15),"satuan_standar":body.get("satuan","Kg"),"satuan_default":body.get("satuan_default","Kg"),"konversi_json":body.get("konversi_json",{}),"label":body.get("label",f"{nama}"),"updated_at":datetime.now().isoformat()}
+    data={"nama_bahan":nama,"qty_standar":safe_float(body.get("qty"),0.15),"satuan_standar":body.get("satuan","Kg"),"satuan_default":body.get("satuan_default","Kg"),"konversi_json":body.get("konversi_json",{}),"label":body.get("label",f"{nama}"),}
     if supabase:
         try:
             ex=supabase.table("kamus_bom").select("id").eq("nama_bahan",nama).limit(1).execute()
