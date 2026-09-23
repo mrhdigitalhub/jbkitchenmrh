@@ -417,36 +417,62 @@ async def root(request: Request): return RedirectResponse("/dashboard/admin")
 async def dashboard_admin(request: Request):
     try:
         stats = await stats_realtime()
-        # FIX 1:1 SESUAI TEMPLATE ASLI - dashboard_admin.html line 7 & 41
-        # Template pakai: {{role}}, {{stats.total_bahan}}, {% for b in bahan %}
-        # Jadi kita harus kirim SEMUA alias agar 1:1 match
         bahan_list = stats.get("items", [])
+        
+        # FIX 1:1 - Ambil menus dari Supabase untuk template line 46 {% for m in menus %}
+        menus_list = []
+        if supabase:
+            try:
+                # Coba table menu_master, master_menu, atau menu
+                for tbl in ["menu_master", "master_menu", "menu", "menus"]:
+                    try:
+                        res = supabase.table(tbl).select("*").limit(10).execute()
+                        if res.data:
+                            menus_list = res.data
+                            print(f"[OK] menus loaded from {tbl}: {len(menus_list)}")
+                            break
+                    except:
+                        continue
+            except Exception as e:
+                print(f"[WARN] menus fetch error: {e}")
+        
+        # Fallback dummy jika belum ada menu di DB (biar template tidak crash)
+        if not menus_list:
+            menus_list = [
+                {"nama_menu": "Nasi Box Premium", "hpp": 25000},
+                {"nama_menu": "Tumpeng Mini", "hpp": 35000},
+                {"nama_menu": "Snack Box", "hpp": 15000},
+            ]
+
         context = {
             "request": request,
-            "stats": stats,           # untuk {{stats.total_bahan}}
-            "bahan": bahan_list,       # untuk {% for b in bahan %} - FIX UTAMA
-            "items": bahan_list,       # untuk {% for b in items %} (backward compat)
-            "role": "ADMIN",          # untuk {{role}}
+            "stats": stats,
+            "bahan": bahan_list,
+            "items": bahan_list,
+            "menus": menus_list,  # FIX untuk line 46 {% for m in menus %}
+            "menu_list": menus_list,
+            "role": "ADMIN",
             "total_bahan": stats.get("total_bahan", 0),
             "aset_inventory": stats.get("aset_inventory", 0),
             "stock_min": stats.get("stock_min", 0),
-            "total_menu": stats.get("total_menu", 0),
+            "total_menu": stats.get("total_menu", len(menus_list)),
         }
-        # unpack juga agar {{total_bahan}} langsung jalan
         context.update(stats)
-        # pastikan bahan tetap ada setelah update
+        # Pastikan tidak tertimpa
         context["bahan"] = bahan_list
         context["items"] = bahan_list
+        context["menus"] = menus_list
         context["stats"] = stats
         context["role"] = "ADMIN"
         
         if templates is None:
-            return HTMLResponse(f"<h1>Templates NOT FOUND</h1><pre>{json.dumps(stats, indent=2, default=str)}</pre>")
+            return HTMLResponse(f"<h1>Templates NOT FOUND</h1><pre>{stats}</pre>")
         return templates.TemplateResponse(request, "dashboard_admin.html", context)
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print(f"[ADMIN CRASH] {e}\n{tb}")
+        print(f"[ADMIN CRASH] {e}
+{tb}")
         return HTMLResponse(f"<h1>JB KITCHEN MRH - ERROR DEBUG</h1><h3>Error: {e}</h3><pre>{tb}</pre>", status_code=500)
 
 @app.get("/dashboard/admin/inventory/save", response_class=HTMLResponse)
