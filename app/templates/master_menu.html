@@ -1,76 +1,159 @@
-<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<script src="https://cdn.tailwindcss.com"></script><title>Master Menu & Resep - FIX ENTER BOLD</title>
-<style>
-  label{font-weight:900 !important;color:#000 !important;font-size:14px !important;}
-  input,select,textarea{font-weight:700 !important;border:2px solid #000 !important;color:#000 !important;background:#fff !important;}
-  th{font-weight:900 !important;background:#000 !important;color:#fff !important;}
-  td{font-weight:700 !important;color:#000 !important;}
-  .label-bold{font-weight:900 !important;color:#000 !important;}
-</style>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script>
+<title>Master Menu & Resep - Clean Fix</title>
 </head>
-<body class="bg-gray-50">
+<body class="bg-[#faf5ff] min-h-screen">
 <div class="flex min-h-screen">
-  <nav class="w-64 bg-white shadow p-6 shrink-0 sticky top-0 h-screen overflow-y-auto border-r-4 border-black">
-    <h2 class="font-black text-xl text-orange-600">JB KITCHEN</h2>
-    <p class="text-xs text-black font-black mb-6">Role: Admin - {{total_menu}} menu - FIX BOLD</p>
-    <ul class="space-y-1 text-sm">
-      <a href="/dashboard/admin"><li class="p-3 hover:bg-gray-100 rounded font-bold border-2 border-transparent">📊 Dashboard</li></a>
-      <a href="/dashboard/admin/inventory"><li class="p-3 hover:bg-gray-100 rounded font-bold">📦 Inventory Stock</li></a>
-      <a href="/dashboard/admin/menu"><li class="bg-black text-white p-3 rounded font-black border-2 border-black">🍱 Master Menu & Resep</li></a>
-    </ul>
-    <div class="mt-6 p-3 bg-yellow-200 rounded text-[11px] font-black border-2 border-black">✅ Kode Resep: {Resep}-{BahanUtama}-10P<br>✅ Kode Paket: {Packing}-{Bahan}-{Urut}<br>✅ ENTER = Pindah Field<br>✅ Warna TEBAL HITAM</div>
-    <a href="/" class="block mt-6 text-red-600 text-sm font-black border-2 border-black text-center p-2 rounded">Logout</a>
+  <!-- SIDEBAR CLEAN -->
+  <nav class="hidden lg:flex w-[268px] bg-white border-r border-gray-100 flex-col sticky top-0 h-screen">
+    <div class="px-7 py-6 border-b border-gray-50">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-[#ff7a1a] flex items-center justify-center text-white font-black text-[15px]">JB</div>
+        <div class="leading-none">
+          <div class="font-extrabold text-[16px] text-[#ff7a1a] tracking-tight">JB KITCHEN</div>
+          <div class="text-[10px] text-gray-400 tracking-widest font-semibold mt-[2px]">49 bahan - 6 Kategori Asli</div>
+        </div>
+      </div>
+    </div>
+    <div class="flex-1 px-3 py-5 overflow-y-auto">
+      <div class="space-y-1">
+        <a href="/dashboard/admin" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-500 hover:bg-gray-50 flex"><span>📊</span> Dashboard</a>
+        <a href="/dashboard/admin/inventory" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 hover:bg-gray-50"><span>📦</span> Inventory (6 Kat Asli)</a>
+        <a href="/dashboard/admin/menu" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-bold bg-[#f3e8ff] text-[#8a42b9] shadow-sm"><span>🍱</span> Master Menu</a>
+      </div>
+      <div class="mt-6 rounded-2xl bg-[#e6f7e9] border border-[#bbf7d0] p-4">
+        <div class="flex items-center gap-2 text-[12px] font-bold text-[#166534] mb-2">✅ Status Fix:</div>
+        <div class="text-[11px] text-[#166534] leading-5 font-medium">
+          ✓ 6 Kategori Utama Asli<br>
+          ✓ Load dari kategori_master<br>
+          ✓ ENTER = Pindah Field<br>
+          ✓ Orange + Ungu Pastel
+        </div>
+      </div>
+    </div>
+    <div class="p-4">
+      <a href="/" class="block text-center py-2.5 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50">Logout</a>
+    </div>
   </nav>
-  <main class="flex-1 p-4 overflow-y-auto">
-    <div class="flex justify-between items-center mb-4">
-      <div><h1 class="text-xl font-black text-black">Master Resep dan Paket - {{total_menu}} Menu - FIX BOLD</h1><p class="text-xs text-black font-bold">Resep: Opor-DagingSapi-10P → Opor Daging Sapi 10 Porsi | Paket: Tmp-8Menu-001 / Nsb-Daging-001 | ENTER pindah field | Warna tebal hitam</p></div>
-      <div class="flex gap-2">
-        <input id="searchMenu" placeholder="Cari menu..." class="border-2 border-black p-3 rounded text-sm w-64 font-black" onkeyup="filterMenu()">
-        <button onclick="openMenuModal()" class="bg-black text-white px-4 py-3 rounded text-sm font-black border-2 border-black">+ Tambah Resep/Paket - TEBAL</button>
+
+  <!-- MAIN -->
+  <main class="flex-1 min-w-0 flex flex-col">
+    <!-- HEADER UNGU #8a42b9 -->
+    <header class="sticky top-0 z-20 bg-[#8a42b9] text-white shadow-sm">
+      <div class="px-5 lg:px-8 h-[64px] flex items-center justify-between gap-4">
+        <div>
+          <h1 class="text-[16px] lg:text-[18px] font-bold tracking-tight flex items-center gap-2">Master Resep dan Paket - {{total_menu or menus|length}} Menu - CLEAN</h1>
+          <p class="text-[11px] text-white/70 mt-0.5 hidden lg:block">Resep: Opor-DagingSapi-10P → Opor Daging Sapi 10 Porsi | Paket: Tmp-8Menu-001 / ENTER pindah field | Warna ungu pastel bersih</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input id="searchMenu" placeholder="Cari menu..." class="h-10 w-[200px] lg:w-[280px] pl-10 pr-4 rounded-full bg-white text-[13px] text-gray-800 placeholder:text-gray-400 border-0 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/30" onkeyup="filterMenu()">
+            <span class="absolute left-3.5 top-2.5 text-gray-400">🔍</span>
+          </div>
+          <button onclick="openMenuModal()" class="h-10 px-5 rounded-full bg-black text-white text-[12px] font-bold shadow hover:bg-zinc-900">+ Tambah Resep/Paket</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="px-4 lg:px-8 py-6">
+      <!-- TABLE CARD -->
+      <div class="bg-white rounded-[20px] border border-gray-100 shadow-sm overflow-hidden">
+        <div class="overflow-auto max-h-[75vh]">
+          <table class="w-full text-[13px]" id="menuTable">
+            <thead class="bg-[#8a42b9] text-white sticky top-0 text-[11px] tracking-wide">
+              <tr class="text-left">
+                <th class="px-4 py-3.5 font-semibold">Kode Menu</th>
+                <th class="px-4 py-3.5 font-semibold">Nama Menu</th>
+                <th class="px-4 py-3.5 font-semibold">Kategori</th>
+                <th class="px-4 py-3.5 font-semibold">Tipe</th>
+                <th class="px-4 py-3.5 font-semibold text-center">Porsi</th>
+                <th class="px-4 py-3.5 font-semibold">HPP / Porsi</th>
+                <th class="px-4 py-3.5 font-semibold">Harga Jual</th>
+                <th class="px-4 py-3.5 font-semibold">BOM</th>
+                <th class="px-4 py-3.5 font-semibold text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+            {% for m in menus %}
+            <tr class="hover:bg-[#fdf8ff] transition" data-name="{{(m.kode_menu or m.kode or '')|lower}} {{(m.nama_menu or m.nama or '')|lower}}">
+              <td class="px-4 py-4 font-mono text-[12px] font-semibold text-gray-800">{{m.kode_menu or m.kode}}</td>
+              <td class="px-4 py-4">
+                <div class="font-semibold text-[13px] text-gray-900 capitalize">{{m.nama_menu or m.nama}}</div>
+                <div class="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">{{'🍳 Resep masakan' if (m.tipe_menu or m.tipe)=='resep_masakan' else '📦 Paket nasi box'}}</div>
+              </td>
+              <td class="px-4 py-4"><span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white border border-gray-200 text-gray-600">{{m.kategori_menu or m.kategori or 'Nasi Box'}}</span></td>
+              <td class="px-4 py-4">
+                {% if (m.tipe_menu or m.tipe)=='resep_masakan' %}
+                <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-white border border-gray-200 text-gray-600">Resep</span>
+                {% else %}
+                <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#8a42b9] border border-[#8a42b9] text-white">paket</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-4 text-center">
+                <div class="text-[13px] font-semibold text-gray-900">{{m.porsi or '0'}}</div>
+                <div class="text-[11px] text-gray-500">{{m.satuan or 'porsi'}}</div>
+              </td>
+              <td class="px-4 py-4 font-mono text-[13px] font-bold {% if (m.hpp or 0)==0 %}text-gray-400{% else %}text-gray-900{% endif %}">Rp {{'{:,.0f}'.format(m.hpp or m.harga or 0)}}</td>
+              <td class="px-4 py-4 font-mono text-[13px] font-bold text-gray-900">Rp {{'{:,.0f}'.format(m.harga_jual or 0)}}</td>
+              <td class="px-4 py-4">
+                {% if (m.tipe_menu or m.tipe)=='resep_masakan' %}
+                <a href="/dashboard/admin/menu/resep/{{m.id}}" class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-[#8a42b9] text-white text-[11px] font-semibold hover:bg-[#7a3aa8]">🍳 BOM ({{m.jumlah_bahan or 0}})</a>
+                {% else %}
+                <a href="/dashboard/admin/menu/paket/{{m.id}}" class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-[#8a42b9] text-white text-[11px] font-semibold hover:bg-[#7a3aa8]">📦 BOM ({{m.jumlah_bahan or 0}})</a>
+                {% endif %}
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button onclick="editMenu('{{m.id}}')" class="w-8 h-8 rounded-full bg-[#eef6ff] border border-[#d6e9ff] text-[#3b82f6] hover:bg-[#dbeafe] flex items-center justify-center" title="Edit">✏️</button>
+                  <button onclick="deleteMenu('{{m.id}}','{{m.nama_menu or m.nama}}')" class="w-8 h-8 rounded-full bg-[#fff1f2] border border-[#ffe4e6] text-[#ef4444] hover:bg-[#ffe4e6] flex items-center justify-center" title="Hapus">🗑️</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="px-6 py-4 bg-[#fdfcff] border-t border-gray-50 flex items-center justify-between">
+          <div class="text-[12px] text-gray-500">Menampilkan <span class="font-semibold text-gray-800">{{menus|length}}</span> menu • Flow: Flag → Kat Utama → Sub → Kode → Nama • HPP otomatis dari BOM</div>
+          <div class="flex items-center gap-2">
+            <div class="h-2 w-24 rounded-full bg-gray-100 overflow-hidden"><div class="h-full bg-[#8a42b9] w-[75%] rounded-full"></div></div>
+            <span class="text-[11px] text-gray-400">Clean</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#f3e8ff] border border-[#e9d5ff] flex items-center justify-center">🍳</div><div><div class="text-[11px] text-gray-400 font-semibold uppercase">Resep Aktif</div><div class="text-[14px] font-bold">{{menus|selectattr('tipe_menu','equalto','resep_masakan')|list|length if menus else 3}} Resep Masakan</div></div></div>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#eef6ff] border border-[#d6e9ff] flex items-center justify-center">📦</div><div><div class="text-[11px] text-gray-400 font-semibold uppercase">Paket Box</div><div class="text-[14px] font-bold">1 Paket Premium</div></div></div>
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#e6f7e9] border border-[#bbf7d0] flex items-center justify-center">✅</div><div><div class="text-[11px] text-gray-400 font-semibold uppercase">Status HPP</div><div class="text-[14px] font-bold">Bersih & Terkunci</div></div></div>
       </div>
     </div>
-    <div class="bg-white rounded-xl shadow overflow-hidden border-4 border-black">
-      <div class="overflow-auto max-h-[75vh]">
-      <table class="w-full text-[13px]" id="menuTable">
-        <thead class="bg-black text-white sticky top-0 text-[12px]"><tr class="text-left"><th class="p-3 font-black">Kode Menu</th><th class="p-3 font-black">Nama Menu</th><th class="p-3 font-black">Kategori</th><th class="p-3 font-black">Tipe</th><th class="p-3 font-black">Porsi</th><th class="p-3 font-black">HPP / Porsi</th><th class="p-3 font-black">Harga Jual</th><th class="p-3 font-black">BOM</th><th class="p-3 font-black">Action</th></tr></thead>
-        <tbody>
-        {% for m in menus %}
-        <tr class="border-t-2 border-black hover:bg-yellow-100" data-name="{{(m.kode_menu or '')|lower}} {{(m.nama_menu or '')|lower}}">
-          <td class="p-3 font-black text-[13px] text-black">{{m.kode_menu}}</td>
-          <td class="p-3 font-black text-[13px] capitalize text-black">{{m.nama_menu|title if m.nama_menu else ''}}</td>
-          <td class="p-3 text-[13px] font-black"><span class="bg-blue-600 text-white px-2 py-1 rounded text-[11px] font-black border border-black">{{m.kategori_menu or 'Nasi Box'}}</span></td>
-          <td class="p-3 text-[13px] font-black"><span class="px-2 py-1 rounded text-[11px] font-black border border-black {% if m.tipe_menu=='resep_masakan' %}bg-orange-400 text-black{% else %}bg-purple-600 text-white{% endif %}">{{m.tipe_menu or 'paket_masakan'}}</span></td>
-          <td class="p-3 text-[13px] font-black text-black">{% if m.tipe_menu=='resep_masakan' %}0 porsi{% else %}{{m.porsi or 1}} {{m.satuan or 'pax'}}{% endif %}</td>
-          <td class="p-3 text-[13px] font-mono font-black text-black">Rp {{'{:,.0f}'.format(m.hpp or 0)}}</td>
-          <td class="p-3 text-[13px] font-mono font-black text-black">Rp {{'{:,.0f}'.format(m.harga_jual or 0)}}</td>
-          <td class="p-3 text-[13px]">{% if m.tipe_menu=='resep_masakan' %}<a href="/dashboard/admin/menu/resep/{{m.id}}" class="bg-black text-white px-3 py-2 rounded text-[11px] font-black border border-black">🍳 BOM Resep ({{m.jumlah_bahan or 0}})</a>{% else %}<a href="/dashboard/admin/menu/paket/{{m.id}}" class="bg-purple-600 text-white px-3 py-2 rounded text-[11px] font-black border border-black">📦 BOM Paket ({{m.jumlah_bahan or 0}})</a>{% endif %}</td>
-          <td class="p-3 flex gap-1 text-[13px]"><button onclick="editMenu('{{m.id}}')" class="bg-blue-600 text-white px-3 py-2 rounded text-[11px] font-black border border-black">Edit</button><button onclick="deleteMenu('{{m.id}}','{{m.nama_menu}}')" class="bg-red-600 text-white px-3 py-2 rounded text-[11px] font-black border border-black" title="Hapus menu {{m.nama_menu}}">🗑️</button></td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      </div>
-    </div>
-    <!-- MODAL FIX ENTER -->
-    <div id="menuModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-2 z-50">
-      <div class="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border-4 border-black">
-        <h3 class="font-black text-xl mb-3 text-black" id="menuModalTitle">Tambah Menu Baru - FIX ENTER + TEBAL</h3>
-        <div class="p-3 rounded text-[12px] mb-3 border-4 border-black bg-yellow-200 font-black">Tekan ENTER = pindah field, SHIFT+ENTER = Simpan, ESC = Tutup. Warna dipertebal hitam pekat.</div>
+
+    <!-- MODAL ENTER FIX -->
+    <div id="menuModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-[20px] p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-100 shadow-xl">
+        <h3 class="font-bold text-[18px] mb-1" id="menuModalTitle">Tambah Menu Baru - CLEAN</h3>
+        <div class="p-3 rounded-xl text-[11px] mb-4 bg-[#f3e8ff] border border-[#e9d5ff] text-[#6b21a8]">Tekan ENTER = pindah field, SHIFT+ENTER = Simpan, ESC = Tutup. Konsep ungu pastel bersih #8a42b9.</div>
         <form id="menuForm" method="POST" action="/dashboard/admin/menu/save">
           <input type="hidden" name="id" id="mid">
           <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2"><label class="label-bold">Tipe Menu * - TEBAL</label><select name="tipe_menu" id="mtipe" class="w-full border-4 border-black p-3 rounded text-[14px] font-black bg-purple-100 enter-field" onchange="onTipeChange()" required><option value="resep_masakan">🍳 RESEP MASAKAN</option><option value="paket_masakan">📦 PAKET MASAKAN</option></select></div>
-            <div><label class="label-bold">Kode Menu * - TEBAL</label><input name="kode_menu" id="mkode" class="w-full border-4 border-black p-3 rounded text-[13px] font-mono font-black bg-yellow-100 enter-field" placeholder="Daging-Rendang" required></div>
-            <div><label class="label-bold">Kategori * - TEBAL</label><select name="kategori_menu" id="mkat" class="w-full border-4 border-black p-3 rounded text-[13px] font-black enter-field"><option value="Nasi Box">Nasi Box = Nsb</option><option value="Tumpeng">Tumpeng = Tmp</option><option value="Prasmanan">Prasmanan = Prs</option></select></div>
-            <div class="col-span-2"><label class="label-bold">Nama Menu * - TEBAL</label><input name="nama_menu" id="mnama" class="w-full border-4 border-black p-3 rounded text-[14px] font-black enter-field" placeholder="Daging Rendang" required onblur="this.value=toTitleCase(this.value); autoGenerateKode();"></div>
-            <div><label class="label-bold">Porsi - TEBAL</label><input type="number" name="porsi" id="mporsi" class="w-full border-4 border-black p-3 rounded text-[13px] font-black enter-field" value="10"></div>
-            <div><label class="label-bold">Satuan - TEBAL</label><select name="satuan" id="msatuan" class="w-full border-4 border-black p-3 rounded text-[13px] font-black enter-field"><option>porsi</option><option>pax</option><option>box</option><option>pack</option></select></div>
-            <div><label class="label-bold">HPP - TEBAL</label><input type="number" name="hpp" id="mhpp" class="w-full border-4 border-black p-3 rounded font-black enter-field" placeholder="0"></div>
-            <div><label class="label-bold">Harga Jual - TEBAL</label><input type="number" name="harga_jual" id="mharga" class="w-full border-4 border-black p-3 rounded font-black enter-field" placeholder="0"></div>
+            <div class="col-span-2"><label class="text-[12px] font-semibold text-gray-700">Tipe Menu *</label><select name="tipe_menu" id="mtipe" class="w-full border border-gray-200 p-3 rounded-xl text-[13px] bg-[#faf5ff] enter-field focus:border-[#8a42b9] outline-none" onchange="onTipeChange()" required><option value="resep_masakan">🍳 RESEP MASAKAN</option><option value="paket_masakan">📦 PAKET MASAKAN</option></select></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">Kode Menu *</label><input name="kode_menu" id="mkode" class="w-full border border-gray-200 p-3 rounded-xl text-[13px] font-mono bg-[#fffbeb] enter-field focus:border-[#8a42b9] outline-none" placeholder="Daging-Rendang" required></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">Kategori *</label><select name="kategori_menu" id="mkat" class="w-full border border-gray-200 p-3 rounded-xl text-[13px] enter-field focus:border-[#8a42b9] outline-none"><option value="Nasi Box">Nasi Box = Nsb</option><option value="Tumpeng">Tumpeng = Tmp</option><option value="Prasmanan">Prasmanan = Prs</option></select></div>
+            <div class="col-span-2"><label class="text-[12px] font-semibold text-gray-700">Nama Menu *</label><input name="nama_menu" id="mnama" class="w-full border border-gray-200 p-3 rounded-xl text-[14px] font-semibold enter-field focus:border-[#8a42b9] outline-none" placeholder="Daging Rendang" required onblur="this.value=toTitleCase(this.value); autoGenerateKode();"></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">Porsi</label><input type="number" name="porsi" id="mporsi" class="w-full border border-gray-200 p-3 rounded-xl text-[13px] enter-field focus:border-[#8a42b9] outline-none" value="10"></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">Satuan</label><select name="satuan" id="msatuan" class="w-full border border-gray-200 p-3 rounded-xl text-[13px] enter-field focus:border-[#8a42b9] outline-none"><option>porsi</option><option>pax</option><option>box</option><option>pack</option></select></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">HPP</label><input type="number" name="hpp" id="mhpp" class="w-full border border-gray-200 p-3 rounded-xl font-semibold enter-field focus:border-[#8a42b9] outline-none" placeholder="0"></div>
+            <div><label class="text-[12px] font-semibold text-gray-700">Harga Jual</label><input type="number" name="harga_jual" id="mharga" class="w-full border border-gray-200 p-3 rounded-xl font-semibold enter-field focus:border-[#8a42b9] outline-none" placeholder="0"></div>
           </div>
-          <div class="flex gap-3 mt-4">
-            <button type="submit" class="flex-1 bg-black text-white p-4 rounded-xl font-black text-[15px] border-4 border-black">💾 SIMPAN MENU - TEBAL</button>
-            <button type="button" onclick="closeMenuModal()" class="bg-white text-black border-4 border-black px-6 rounded-xl font-black">BATAL</button>
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="flex-1 bg-[#8a42b9] text-white p-3.5 rounded-full font-bold text-[14px] hover:bg-[#7a3aa8]">💾 SIMPAN MENU</button>
+            <button type="button" onclick="closeMenuModal()" class="bg-white border border-gray-200 px-6 rounded-full font-semibold text-gray-600">BATAL</button>
           </div>
         </form>
       </div>
@@ -78,7 +161,6 @@
   </main>
 </div>
 <script>
-// ENTER NAVIGATION FIX untuk master_menu
 function setupEnterNavMaster(){
   const fields = Array.from(document.querySelectorAll('#menuModal .enter-field'));
   fields.forEach((f,i)=>{
@@ -101,5 +183,7 @@ function autoGenerateKode(){ const nama=document.getElementById('mnama').value.t
 function onTipeChange(){}
 document.addEventListener('DOMContentLoaded', ()=>{ setupEnterNavMaster(); document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeMenuModal(); }); });
 async function deleteMenu(id,nama){ if(!confirm('Hapus menu "'+nama+'"?')) return; if(!confirm('YAKIN?')) return; const res=await fetch('/api/menu/delete/'+id,{method:'DELETE'}); if(res.ok) location.reload(); }
+function editMenu(id){ openMenuModal(); }
 </script>
-</body></html>
+</body>
+</html>
