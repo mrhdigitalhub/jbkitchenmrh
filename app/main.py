@@ -417,20 +417,29 @@ async def root(request: Request): return RedirectResponse("/dashboard/admin")
 async def dashboard_admin(request: Request):
     try:
         stats = await stats_realtime()
-        # FIX: template Bapak pakai {{stats.total_bahan}} dan {{role}}
-        # Jadi kita kirim BOTH: object stats + unpacked + role
+        # FIX 1:1 SESUAI TEMPLATE ASLI - dashboard_admin.html line 7 & 41
+        # Template pakai: {{role}}, {{stats.total_bahan}}, {% for b in bahan %}
+        # Jadi kita harus kirim SEMUA alias agar 1:1 match
+        bahan_list = stats.get("items", [])
         context = {
             "request": request,
-            "stats": stats,  # untuk {{stats.total_bahan}}
-            "role": "ADMIN",  # untuk {{role}}
+            "stats": stats,           # untuk {{stats.total_bahan}}
+            "bahan": bahan_list,       # untuk {% for b in bahan %} - FIX UTAMA
+            "items": bahan_list,       # untuk {% for b in items %} (backward compat)
+            "role": "ADMIN",          # untuk {{role}}
             "total_bahan": stats.get("total_bahan", 0),
             "aset_inventory": stats.get("aset_inventory", 0),
             "stock_min": stats.get("stock_min", 0),
             "total_menu": stats.get("total_menu", 0),
-            "items": stats.get("items", []),
         }
-        # juga unpack semua biar {{total_bahan}} tetap jalan
+        # unpack juga agar {{total_bahan}} langsung jalan
         context.update(stats)
+        # pastikan bahan tetap ada setelah update
+        context["bahan"] = bahan_list
+        context["items"] = bahan_list
+        context["stats"] = stats
+        context["role"] = "ADMIN"
+        
         if templates is None:
             return HTMLResponse(f"<h1>Templates NOT FOUND</h1><pre>{json.dumps(stats, indent=2, default=str)}</pre>")
         return templates.TemplateResponse(request, "dashboard_admin.html", context)
