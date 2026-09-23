@@ -1,84 +1,224 @@
 <!doctype html>
-<html lang="id">
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Inventory - 49 Bahan - JB KITCHEN - Opsi C</title>
+<title>Inventory - 49 Bahan - JB KITCHEN</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
-  label{font-weight:600!important;color:#4B5563!important;font-size:12px!important;}
-  input,select{font-weight:500!important;border:1px solid #E5E7EB!important;color:#374151!important;background:#fff!important;}
-  input:focus,select:focus{border-color:#8a42b9!important;box-shadow:0 0 0 3px rgba(138,66,185,0.12)!important;outline:none;}
+  label{font-weight:600 !important;color:#4B5563 !important;font-size:12px !important;}
+  input,select{font-weight:500 !important;border:1px solid #E5E7EB !important;color:#374151 !important;background:#fff !important;}
+  input:focus,select:focus{border-color:#8a42b9 !important;outline:none;box-shadow:0 0 0 3px rgba(138,66,185,0.12) !important;}
+  .enter-field{transition:all 0.15s;}
 </style>
 </head>
 <body class="bg-[#faf5ff]">
 <div class="flex min-h-screen">
-  <nav class="w-64 bg-white p-5 border-r border-purple-100 shrink-0">
-    <h2 class="font-bold text-[18px] text-orange-600">JB KITCHEN</h2>
-    <p class="text-[11px] text-gray-500 mb-5">49 bahan - Opsi C 1:1 Fixed</p>
+  <nav class="w-64 bg-white shadow-sm p-5 shrink-0 border-r border-purple-100 sticky top-0 h-screen overflow-y-auto">
+    <h2 class="font-bold text-[18px] text-orange-600 tracking-tight">JB KITCHEN</h2>
+    <p class="text-[11px] text-gray-500 mt-1 mb-5 font-medium">49 bahan - 6 Kategori Asli</p>
     <ul class="space-y-1 text-[13px]">
-      <li class="p-2.5 bg-orange-50 rounded font-semibold text-orange-700 border border-orange-100">📦 Inventory (Opsi C)</li>
+      <a href="/dashboard/admin"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>📊</span> Dashboard</li></a>
+      <a href="/dashboard/admin/inventory"><li class="bg-orange-50 p-2.5 rounded font-semibold text-orange-700 border border-orange-100 flex gap-2"><span>📦</span> Inventory (6 Kat Asli)</li></a>
+      <a href="/dashboard/admin/menu"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>🍱</span> Master Menu</li></a>
     </ul>
-    <div class="mt-5 p-3 bg-green-50 rounded-lg text-[11px] border border-green-100 text-green-800">✅ Fixed 0 error<br>• Label distinct pck vs plk<br>• +Sub & +Kat Utama INSERT DB</div>
-  </nav>
-  <main class="flex-1 p-5">
-    <div class="flex justify-between mb-4 gap-4">
-      <div><h1 class="text-[18px] font-bold text-gray-800">Inventory - {{total}} Bahan</h1><p class="text-[11px] text-gray-500">6 utama distinct: 📦 Kemasan Kertas vs 🥤 Pelengkap - tidak rancu</p></div>
-      <div class="flex gap-2"><input id="search" placeholder="Cari kode/nama..." class="border border-gray-200 p-2.5 rounded-lg text-[13px] w-52"><button id="btnAdd" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-semibold">+ Tambah</button></div>
+    <div class="mt-5 p-3 bg-green-50 rounded-lg text-[11px] border border-green-100 text-green-800 leading-relaxed">
+      <div class="font-semibold mb-1">✅ Status Fix:</div>
+      <div>✓ 6 Kategori Utama Asli</div>
+      <div>✓ Load dari kategori_master</div>
+      <div>✓ ENTER = Pindah Field</div>
+      <div>✓ Orange + Ungu Pastel</div>
     </div>
-    <div class="bg-white rounded-xl border border-purple-100 overflow-hidden">
-      <div class="overflow-auto max-h-[78vh]">
-      <table class="w-full text-[13px]"><thead class="sticky top-0 bg-[#8a42b9] text-white text-[11px] font-bold"><tr><th class="p-3 text-left">Kode</th><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Kat Utama</th><th class="p-3 text-left">Sub</th><th class="p-3 text-left w-[90px]">Action</th></tr></thead>
-      <tbody id="tbodyBahan">{% for b in bahan %}<tr class="border-t hover:bg-purple-50/60 row-bahan" data-id="{{b.id}}" data-name="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }}" data-sub="{{b.kode_kategori or ''}}" data-kode="{{(b.kode_bahan or '')|lower}}"><td class="p-2.5 font-mono text-[11px]">{{b.kode_bahan}}</td><td class="p-2.5 font-semibold">{{b.nama_bahan}}</td><td class="p-2.5">{{b.kategori_utama}}</td><td class="p-2.5">{{b.kode_kategori}}</td><td class="p-2.5 flex gap-1"><button class="btn-edit bg-orange-50 text-orange-600 border border-orange-100 p-1.5 rounded-lg" data-bahan='{{ b|tojson }}' title="Edit">✏️</button><button class="btn-del bg-red-50 text-red-600 border border-red-100 p-1.5 rounded-lg" data-id="{{b.id}}" title="Hapus">🗑️</button></td></tr>{% endfor %}</tbody></table>
+    <a href="/" class="block mt-5 text-gray-400 text-[12px] hover:text-gray-600">Logout</a>
+  </nav>
+  <main class="flex-1 p-5 overflow-y-auto">
+    <div class="flex justify-between items-start mb-4 gap-4">
+      <div>
+        <h1 class="text-[18px] font-bold text-gray-800 tracking-tight">Inventory - {{total}} Bahan</h1>
+        <p class="text-[11px] text-gray-500 mt-1">kategori_master: nbt, dgi, prs, pck, cuc, plk (6 utama) - Flow: Flag → Kat Utama → Sub → Kode → Nama</p>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <input id="search" placeholder="Cari kode / nama..." class="border border-gray-200 p-2.5 rounded-lg text-[13px] w-52 bg-white shadow-sm focus:border-purple-300">
+        <button id="btnAdd" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-semibold shadow-sm transition-colors">+ Tambah</button>
       </div>
     </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
+      <div class="overflow-auto max-h-[78vh]">
+      <table class="w-full text-[13px]" id="bahanTable">
+        <thead class="sticky top-0 z-10">
+          <tr class="bg-[#8a42b9] text-white text-[11px] font-bold tracking-wide">
+            <th class="p-3 text-left">Flag</th>
+            <th class="p-3 text-left">Kode</th>
+            <th class="p-3 text-left">Nama</th>
+            <th class="p-3 text-left">Kat Utama</th>
+            <th class="p-3 text-left">Sub</th>
+            <th class="p-3 text-left">Stock</th>
+            <th class="p-3 text-left">Harga</th>
+            <th class="p-3 text-left w-[90px]">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyBahan" class="divide-y divide-gray-50">
+        {% for b in bahan %}
+        <tr class="hover:bg-purple-50/60 transition-colors row-bahan" data-id="{{b.id}}" data-name="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }}" data-kat="{{b.kategori_utama or ''}}" data-sub="{{b.kode_kategori or ''}}" data-kode="{{(b.kode_bahan or '')|lower}}">
+          <td class="p-2.5"><span class="bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[11px] font-medium border border-green-100">{{b.hall_flag or b.orgk_flag or 'Orgk'}}</span></td>
+          <td class="p-2.5 font-mono text-[11px] font-medium text-gray-600">{{b.kode_bahan}}</td>
+          <td class="p-2.5 font-semibold text-gray-800 capitalize">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
+          <td class="p-2.5 text-gray-600 font-medium">{{b.kategori_utama or ''}}</td>
+          <td class="p-2.5 text-gray-500">{{b.kode_kategori or ''}}</td>
+          <td class="p-2.5 font-semibold text-gray-700 {% if (b.stock_qty or 0)==0 %}text-red-600{% endif %}">{{b.stock_qty}}</td>
+          <td class="p-2.5 font-mono text-[12px] text-gray-700">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td>
+          <td class="p-2.5">
+            <div class="flex gap-1.5">
+              <button class="btn-edit bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-100 p-1.5 rounded-lg transition-colors" data-bahan='{{ b|tojson }}' title="Edit {{b.nama_bahan}}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+              </button>
+              <button class="btn-del bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-1.5 rounded-lg transition-colors" data-id="{{b.id}}" title="Hapus {{b.nama_bahan}}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- MODAL INPUT BAHAN BARU -->
     <div id="modal" class="hidden fixed inset-0 bg-[#8a42b9]/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-xl border border-purple-100 relative">
-        <div class="p-5 border-b bg-gradient-to-r from-orange-50 to-purple-50"><h3 class="font-bold text-[16px]">Master Bahan - Opsi C Fixed 0 Error</h3><p class="text-[11px] text-gray-600 mt-1">Label distinct biar tidak salah klik pck vs plk. [+ Sub Baru] & [+ Kat Utama Baru] = INSERT DB</p></div>
+      <div class="bg-white rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-xl border border-purple-100">
+        <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-purple-50">
+          <h3 class="font-bold text-[16px] text-gray-800">Master Bahan - 6 Kategori Asli + Orange + Ungu</h3>
+          <p class="text-[11px] text-gray-600 mt-1.5 bg-white/70 border border-amber-100 p-2 rounded-lg inline-block">⌨️ <b>ENTER</b> = pindah field, <b>SHIFT+ENTER</b> = Simpan, <b>ESC</b> = Tutup. 6 Kategori: nbt, dgi, prs, pck, cuc, plk</p>
+        </div>
         <form id="bahanForm" method="POST" action="/dashboard/admin/inventory/save" class="p-5">
-          <input type="hidden" name="id" id="fid"><input type="hidden" name="no_urut_sub" id="fno_urut" value="1"><input type="hidden" name="orgk_flag" id="forgk"><input type="hidden" name="stock_qty" id="fstock"><input type="hidden" name="harga_per_satuan" id="fharga">
+          <input type="hidden" name="id" id="fid"><input type="hidden" name="no_urut_sub" id="fno_urut" value="1"><input type="hidden" name="no_kategori" id="fno_kat" value="1"><input type="hidden" name="orgk_flag" id="forgk"><input type="hidden" name="stock_qty" id="fstock"><input type="hidden" name="harga_per_satuan" id="fharga">
+          
           <div class="bg-orange-50/60 p-4 rounded-xl border border-orange-100 mb-4">
+            <h4 class="font-semibold text-[12px] text-orange-800 mb-3 tracking-wide">FLAG - KATEGORI UTAMA (6 Asli) - SUB - KODE</h4>
             <div class="grid grid-cols-2 gap-3">
-              <div><label>1. Flag</label><select id="fhall" name="hall_flag" class="w-full p-2.5 rounded-lg"><option value="">Orgk (Non-Halal)</option><option value="Halal">Halal</option></select></div>
-              <div><label class="flex justify-between">2. Kategori Utama * Distinct <button type="button" id="btnAddKatUtama" class="text-[10px] bg-purple-100 text-[#8a42b9] px-2 py-0.5 rounded border">+ Kat Utama Baru</button></label><select id="fkat_utama" name="kategori_utama" class="w-full p-2.5 rounded-lg"></select><p class="text-[10px] text-gray-400 mt-1">pck=📦 Kertas, plk=🥤 Pelengkap - beda jelas</p></div>
-              <div><label class="flex justify-between">3. Sub Kategori * <button type="button" id="btnAddSub" class="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded border">+ Sub Baru</button></label><select id="fkode_kat" name="kode_kategori" class="w-full p-2.5 rounded-lg"><option>-- Pilih Sub --</option></select><input id="fkode_auto" name="kode_bahan" class="w-full p-2.5 rounded-lg mt-2 font-mono text-[11px] bg-yellow-50" readonly placeholder="orgk-nbt-syr-001"></div>
-              <div><label>4. Nama Bahan *</label><input id="fnama" name="nama_bahan" class="w-full p-2.5 rounded-lg" placeholder="Biji Ketumbar" required></div>
+              <div><label>1. Flag</label><select id="fhall" name="hall_flag" class="w-full p-2.5 rounded-lg text-[13px] enter-field"><option value="">Orgk (Non-Halal)</option><option value="Halal">Halal</option></select></div>
+              <div><label>2. Kategori Utama * (6 Asli dari DB)</label><select id="fkat_utama" name="kategori_utama" class="w-full p-2.5 rounded-lg text-[13px] enter-field bg-white"><option value="">Pilih Kategori Utama (6 Asli)...</option></select></div>
+              <div><label>3. Sub Kategori *</label><select id="fkode_kat" name="kode_kategori" class="w-full p-2.5 rounded-lg text-[13px] enter-field bg-white"><option value="">-- Pilih Sub --</option></select><input id="fkode_auto" name="kode_bahan" class="w-full p-2.5 rounded-lg mt-2 font-mono text-[11px] bg-yellow-50 border border-yellow-200 text-gray-600" readonly placeholder="kode auto - contoh: orgk-nbt-syr-001"></div>
+              <div><label>4. Nama Bahan *</label><input id="fnama" name="nama_bahan" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Biji Ketumbar" required></div>
+              <div><label>Merek</label><input id="fmerek" name="merek" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Merek"></div>
+              <div><label>Satuan</label><select id="fsatuan" name="satuan_default" class="w-full p-2.5 rounded-lg text-[13px] enter-field bg-white"><option>Kg</option><option>Liter</option><option>Pcs</option><option>Sachet</option><option>Ikat</option></select></div>
             </div>
           </div>
+
           <div class="grid grid-cols-3 gap-3 mb-5">
-            <div><label>Stock Awal</label><input id="fstock_awal" name="stock_awal" type="number" step="0.01" class="w-full p-2.5 rounded-lg calc-trigger" placeholder="0"></div>
-            <div><label>Tambah</label><input id="ftambah" name="tambah" type="number" step="0.01" class="w-full p-2.5 rounded-lg calc-trigger" placeholder="5"></div>
-            <div><label>Terpakai</label><input id="fterpakai" name="terpakai" type="number" step="0.01" class="w-full p-2.5 rounded-lg calc-trigger" placeholder="0"></div>
-            <div><label>Harga Awal</label><input id="fharga_awal" name="harga_awal" type="number" step="1" class="w-full p-2.5 rounded-lg calc-trigger" placeholder="0"></div>
-            <div><label>Harga Baru</label><input id="fharga_baru" name="harga_baru" type="number" step="1" class="w-full p-2.5 rounded-lg calc-trigger" placeholder="15500"></div>
-            <div class="bg-[#faf5ff] p-3 rounded-xl border border-purple-100"><div class="text-[11px] text-gray-500">Stock: <span id="stockFinal" class="font-bold text-[#8a42b9]">0</span></div><div class="text-[11px] text-gray-500">Harga: <span id="hargaFinal" class="font-bold text-green-700">Rp 0</span></div></div>
+            <div><label>Stock Awal</label><input id="fstock_awal" name="stock_awal" type="number" step="0.01" class="w-full p-2.5 rounded-lg enter-field calc-trigger" placeholder="0"></div>
+            <div><label>Tambah</label><input id="ftambah" name="tambah" type="number" step="0.01" class="w-full p-2.5 rounded-lg enter-field calc-trigger" placeholder="5"></div>
+            <div><label>Terpakai</label><input id="fterpakai" name="terpakai" type="number" step="0.01" class="w-full p-2.5 rounded-lg enter-field calc-trigger" placeholder="0"></div>
+            <div><label>Harga Awal</label><input id="fharga_awal" name="harga_awal" type="number" step="1" class="w-full p-2.5 rounded-lg enter-field calc-trigger" placeholder="0"></div>
+            <div><label>Harga Baru</label><input id="fharga_baru" name="harga_baru" type="number" step="1" class="w-full p-2.5 rounded-lg enter-field calc-trigger" placeholder="15500"></div>
+            <div class="bg-[#faf5ff] p-3 rounded-xl border border-purple-100">
+              <div class="text-[11px] text-gray-500">Stock Final: <span id="stockFinal" class="font-bold text-[#8a42b9]">0</span></div>
+              <div class="text-[11px] text-gray-500 mt-1">Harga Final: <span id="hargaFinal" class="font-bold text-green-700">Rp 0</span></div>
+              <div class="text-[10px] text-purple-600/70 mt-2">ENTER pindah, SHIFT+ENTER simpan</div>
+            </div>
           </div>
-          <div class="flex gap-2"><button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-xl font-semibold">💾 Simpan Bahan</button><button type="button" id="btnCloseModal" class="bg-white border border-gray-200 px-6 rounded-xl">Batal</button></div>
+
+          <div class="flex gap-2.5">
+            <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-xl font-semibold text-[13px] shadow-sm transition-colors">💾 Simpan Bahan</button>
+            <button type="button" id="btnCloseModal" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-6 rounded-xl font-medium text-[13px] transition-colors">Batal</button>
+          </div>
         </form>
-        <div id="modalAddSub" class="hidden absolute inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]"><div class="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl"><h4 class="font-bold text-[13px] text-[#8a42b9]">+ Sub Baru (INSERT DB)</h4><div class="space-y-2 mt-3"><div><label>Parent</label><input id="addSubParent" class="w-full p-2 rounded-lg bg-gray-50" readonly></div><div><label>Kode Baru (3 huruf)</label><input id="addSubCode" class="w-full p-2 rounded-lg" placeholder="sck"></div><div><label>Label Baru</label><input id="addSubLabel" class="w-full p-2 rounded-lg" placeholder="Snack Pelengkap"></div></div><div class="flex gap-2 mt-3"><button id="btnSaveSub" class="flex-1 bg-orange-500 text-white p-2 rounded-lg text-[12px]">Simpan ke DB</button><button id="btnCancelSub" class="bg-white border px-4 rounded-lg text-[12px]">Batal</button></div></div></div>
-        <div id="modalAddKat" class="hidden absolute inset-0 bg-black/40 flex items-center justify-center p-4 z-[60]"><div class="bg-white rounded-xl p-4 w-full max-w-sm shadow-xl"><h4 class="font-bold text-[13px] text-orange-600">+ Kat Utama Baru (INSERT DB)</h4><div class="space-y-2 mt-3"><div><label>Kode Baru (3 huruf)</label><input id="addKatCode" class="w-full p-2 rounded-lg" placeholder="bks"></div><div><label>Label Baru</label><input id="addKatLabel" class="w-full p-2 rounded-lg" placeholder="Bahan Kemasan Snack"></div></div><div class="flex gap-2 mt-3"><button id="btnSaveKat" class="flex-1 bg-[#8a42b9] text-white p-2 rounded-lg text-[12px]">Simpan ke DB</button><button id="btnCancelKat" class="bg-white border px-4 rounded-lg text-[12px]">Batal</button></div></div></div>
       </div>
     </div>
   </main>
 </div>
+
 <script>
-let STATE={rows:[],kodeCache:{},kategoriUtama:[],kategoriSub:[]},DOM={};
-function sf(v){return parseFloat(v)||0}
-function cacheDOM(){DOM.modal=document.getElementById('modal');DOM.form=document.getElementById('bahanForm');DOM.tbody=document.getElementById('tbodyBahan');DOM.fid=document.getElementById('fid');DOM.fnama=document.getElementById('fnama');DOM.fkat_utama=document.getElementById('fkat_utama');DOM.fkode_kat=document.getElementById('fkode_kat');DOM.fkode_auto=document.getElementById('fkode_auto');DOM.fno_urut=document.getElementById('fno_urut');DOM.fhall=document.getElementById('fhall');DOM.forgk=document.getElementById('forgk');DOM.fstock=document.getElementById('fstock');DOM.fharga=document.getElementById('fharga');DOM.fstock_awal=document.getElementById('fstock_awal');DOM.ftambah=document.getElementById('ftambah');DOM.fterpakai=document.getElementById('fterpakai');DOM.fharga_awal=document.getElementById('fharga_awal');DOM.fharga_baru=document.getElementById('fharga_baru');DOM.modalAddSub=document.getElementById('modalAddSub');DOM.modalAddKat=document.getElementById('modalAddKat');if(DOM.tbody)STATE.rows=Array.from(DOM.tbody.querySelectorAll('.row-bahan'))}
-function calc(){const a=sf(DOM.fstock_awal?.value),t=sf(DOM.ftambah?.value),p=sf(DOM.fterpakai?.value);const s=a+t-p;const ha=sf(DOM.fharga_awal?.value),hb=sf(DOM.fharga_baru?.value);const h=hb>0?hb:ha;document.getElementById('stockFinal').textContent=s;document.getElementById('hargaFinal').textContent='Rp '+h.toLocaleString('id-ID');if(DOM.fstock)DOM.fstock.value=s;if(DOM.fharga)DOM.fharga.value=h}
-function getDistinctLabel(code,orig){const m={'nbt':'🥬 Bahan Nabati & Sayur (nbt) - 8 sub','dgi':'🥩 Hewani & Daging (dgi) - 5 sub','prs':'🧂 Perasa, Saus & Bumbu Instan (prs)','pck':'📦 Kemasan Kertas & Styrofoam (pck) - krt, pls','cuc':'🧼 Cuci & Chemical Cair (cuc)','plk':'🥤 Pelengkap - Sendok & Minuman (plk) - sdk, mnm'};return m[code]||(orig+' ('+code+')')}
-async function loadKategori(){try{const r=await fetch('/api/kategori/list');const d=await r.json();STATE.kategoriUtama=d.utama||[];STATE.kategoriSub=d.sub||[];renderUtama()}catch(e){STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati',type:'utama'},{code:'dgi',label:'Bahan Hewani',type:'utama'},{code:'prs',label:'Perasa / Saus',type:'utama'},{code:'pck',label:'Packaging Kertas',type:'utama'},{code:'cuc',label:'Cuci',type:'utama'},{code:'plk',label:'Plastik & Kemasan',type:'utama'}];STATE.kategoriSub=[{code:'syr',label:'Sayuran',parent:'nbt'},{code:'krt',label:'Kertas',parent:'pck'},{code:'pls',label:'Plastik Styrofoam',parent:'pck'},{code:'sdk',label:'Sendok plastik',parent:'plk'},{code:'mnm',label:'Minuman',parent:'plk'},{code:'ras',label:'Rasa / Saus',parent:'prs'},{code:'cir',label:'Cairan',parent:'cuc'}];renderUtama()}}
-function renderUtama(){if(!DOM.fkat_utama)return;DOM.fkat_utama.innerHTML='<option value="">Pilih Distinct...</option>'+STATE.kategoriUtama.filter(k=>k.type==='utama'||!k.type).map(k=>`<option value="${k.code}">${getDistinctLabel(k.code,k.label)}</option>`).join('');filterSub()}
-function filterSub(){const c=DOM.fkat_utama?.value;if(!c){DOM.fkode_kat.innerHTML='<option>-- Pilih Sub --</option>';return}const f=STATE.kategoriSub.filter(s=>s.parent===c);DOM.fkode_kat.innerHTML='<option>-- Pilih Sub --</option>'+f.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');genKode()}
-function genKode(){const flag=(DOM.fhall?.value?'Halal':(DOM.forgk?.value||'Orgk')).replace(/\s+/g,'');const kat=DOM.fkat_utama?.value||'nbt';const sub=DOM.fkode_kat?.value||'rmp';const key=kat+'-'+sub;let u=STATE.kodeCache[key]||1;const ex=STATE.rows.filter(r=>r.dataset.sub===sub).length;if(ex>0)u=ex+1;STATE.kodeCache[key]=u;const kode=(flag+'-'+kat+'-'+sub+'-'+String(u).padStart(3,'0')).toLowerCase();if(DOM.fkode_auto)DOM.fkode_auto.value=kode;if(DOM.fno_urut)DOM.fno_urut.value=u}
-function openModal(){DOM.modal.classList.remove('hidden')}function closeModal(){DOM.modal.classList.add('hidden')}
-function openAddSub(){const p=DOM.fkat_utama?.value;if(!p){alert('Pilih Kat Utama dulu');return}document.getElementById('addSubParent').value=p;DOM.modalAddSub.classList.remove('hidden')}function closeAddSub(){DOM.modalAddSub.classList.add('hidden');document.getElementById('addSubCode').value='';document.getElementById('addSubLabel').value=''}
-async function saveSub(){const parent=document.getElementById('addSubParent').value;const code=document.getElementById('addSubCode').value.trim().toLowerCase();const label=document.getElementById('addSubLabel').value.trim();if(!code||!label){alert('Isi kode & label');return}try{const r=await fetch('/api/kategori/sub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label,parent})});const d=await r.json();if(r.ok){STATE.kategoriSub.push({code,label,parent});filterSub();DOM.fkode_kat.value=code;genKode();closeAddSub();alert('Sub '+code+' berhasil INSERT DB')}else alert(d.detail||'Gagal')}catch(e){STATE.kategoriSub.push({code,label,parent});filterSub();DOM.fkode_kat.value=code;genKode();closeAddSub()}}
-function openAddKat(){DOM.modalAddKat.classList.remove('hidden')}function closeAddKat(){DOM.modalAddKat.classList.add('hidden');document.getElementById('addKatCode').value='';document.getElementById('addKatLabel').value=''}
-async function saveKat(){const code=document.getElementById('addKatCode').value.trim().toLowerCase();const label=document.getElementById('addKatLabel').value.trim();if(!code||!label){alert('Isi kode & label');return}try{const r=await fetch('/api/kategori/utama',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label})});const d=await r.json();if(r.ok){STATE.kategoriUtama.push({code,label,type:'utama'});renderUtama();DOM.fkat_utama.value=code;filterSub();closeAddKat();alert('Kat Utama '+code+' berhasil INSERT DB')}else alert(d.detail||'Gagal')}catch(e){STATE.kategoriUtama.push({code,label,type:'utama'});renderUtama();DOM.fkat_utama.value=code;filterSub();closeAddKat()}}
-document.addEventListener('DOMContentLoaded',()=>{cacheDOM();loadKategori();document.getElementById('btnAdd')?.addEventListener('click',openModal);document.getElementById('btnCloseModal')?.addEventListener('click',closeModal);document.getElementById('btnAddSub')?.addEventListener('click',openAddSub);document.getElementById('btnCancelSub')?.addEventListener('click',closeAddSub);document.getElementById('btnSaveSub')?.addEventListener('click',saveSub);document.getElementById('btnAddKatUtama')?.addEventListener('click',openAddKat);document.getElementById('btnCancelKat')?.addEventListener('click',closeAddKat);document.getElementById('btnSaveKat')?.addEventListener('click',saveKat);document.querySelectorAll('.calc-trigger').forEach(el=>el.addEventListener('input',calc));DOM.fkode_kat?.addEventListener('change',genKode);DOM.fkat_utama?.addEventListener('change',filterSub);DOM.fhall?.addEventListener('change',genKode)});
+let STATE = { rows: [], kodeCache: {}, kategoriUtama: [], kategoriSub: [] };
+let DOM = {};
+function sf(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function cacheDOM(){
+  DOM.modal=document.getElementById('modal'); DOM.form=document.getElementById('bahanForm'); DOM.tbody=document.getElementById('tbodyBahan'); DOM.search=document.getElementById('search');
+  DOM.fid=document.getElementById('fid'); DOM.fnama=document.getElementById('fnama'); DOM.fmerek=document.getElementById('fmerek'); DOM.fsatuan=document.getElementById('fsatuan');
+  DOM.fhall=document.getElementById('fhall'); DOM.forgk=document.getElementById('forgk'); DOM.fkat_utama=document.getElementById('fkat_utama'); DOM.fkode_kat=document.getElementById('fkode_kat');
+  DOM.fkode_auto=document.getElementById('fkode_auto'); DOM.fno_urut=document.getElementById('fno_urut'); DOM.fno_kat=document.getElementById('fno_kat');
+  DOM.fstock=document.getElementById('fstock'); DOM.fharga=document.getElementById('fharga'); DOM.fstock_awal=document.getElementById('fstock_awal'); DOM.ftambah=document.getElementById('ftambah'); DOM.fterpakai=document.getElementById('fterpakai'); DOM.fharga_awal=document.getElementById('fharga_awal'); DOM.fharga_baru=document.getElementById('fharga_baru');
+  if(DOM.tbody) STATE.rows=Array.from(DOM.tbody.querySelectorAll('.row-bahan'));
+}
+function calc(){
+  const awal=sf(DOM.fstock_awal?.value); const tambah=sf(DOM.ftambah?.value); const pakai=sf(DOM.fterpakai?.value);
+  const stockFinal=awal+tambah-pakai; const ha=sf(DOM.fharga_awal?.value); const hb=sf(DOM.fharga_baru?.value); const hargaFinal=hb>0?hb:ha;
+  const elS=document.getElementById('stockFinal'); const elH=document.getElementById('hargaFinal');
+  if(elS) elS.textContent=stockFinal; if(elH) elH.textContent='Rp '+hargaFinal.toLocaleString('id-ID');
+  if(DOM.fstock) DOM.fstock.value=stockFinal; if(DOM.fharga) DOM.fharga.value=hargaFinal;
+}
+async function loadKategori(){
+  try{
+    const res=await fetch('/api/kategori/list'); const data=await res.json();
+    STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[];
+    renderKategoriUtama();
+  }catch(e){
+    console.log('fallback 6 kategori asli',e);
+    STATE.kategoriUtama=[
+      {code:'nbt', label:'Bahan Nabati', type:'utama'},
+      {code:'dgi', label:'Bahan Hewani / Daging', type:'utama'},
+      {code:'prs', label:'Perasa / Saus', type:'utama'},
+      {code:'pck', label:'Packaging Kertas / Karton', type:'utama'},
+      {code:'cuc', label:'Cuci / Chemical', type:'utama'},
+      {code:'plk', label:'Plastik & Kemasan', type:'utama'}
+    ];
+    STATE.kategoriSub=[
+      {code:'syr', label:'Sayuran', parent:'nbt'}, {code:'umb', label:'Umbi-umbian', parent:'nbt'}, {code:'kcg', label:'Kacang & Bijian', parent:'nbt'}, {code:'rmp', label:'Rempah', parent:'nbt'}, {code:'srl', label:'Serealia / Beras', parent:'nbt'}, {code:'myk', label:'Minyak & Lemak', parent:'nbt'}, {code:'buh', label:'Buah', parent:'nbt'}, {code:'bdr', label:'Bumbu Dasar', parent:'nbt'},
+      {code:'ugs', label:'Unggas Potong', parent:'dgi'}, {code:'sap', label:'Sapi', parent:'dgi'}, {code:'lut', label:'Laut / Seafood', parent:'dgi'}, {code:'oss', label:'Olahan Susu', parent:'dgi'}, {code:'tlr', label:'Telur / Unggas', parent:'dgi'},
+      {code:'ras', label:'Rasa / Saus', parent:'prs'}, {code:'ins', label:'Instant / Bumbu Instan', parent:'prs'},
+      {code:'krt', label:'Kertas / Karton', parent:'pck'}, {code:'pls', label:'Plastik Styrofoam', parent:'pck'},
+      {code:'cir', label:'Cairan', parent:'cuc'},
+      {code:'mnm', label:'Minuman / Air', parent:'plk'}, {code:'sdk', label:'Sendok+garpu plastik', parent:'plk'}
+    ];
+    renderKategoriUtama();
+  }
+}
+function renderKategoriUtama(){
+  if(!DOM.fkat_utama) return;
+  const utama=STATE.kategoriUtama.filter(k=>k.type==='utama' || !k.type);
+  DOM.fkat_utama.innerHTML='<option value="">Pilih Kategori Utama (6 Asli)...</option>'+utama.map(k=>`<option value="${k.code}">${k.label} (${k.code})</option>`).join('');
+  filterSubKategori();
+}
+function filterSubKategori(){
+  const utamaCode=DOM.fkat_utama?.value;
+  if(!utamaCode){ if(DOM.fkode_kat) DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
+  const filtered=STATE.kategoriSub.filter(s=>s.parent===utamaCode);
+  if(!DOM.fkode_kat) return;
+  DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub Kategori --</option>'+filtered.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
+  genKode();
+}
+function genKode(){
+  const flag=(DOM.fhall?.value?'Halal':(DOM.forgk?.value||'Orgk')).replace(/\s+/g,'');
+  const kat=DOM.fkat_utama?.value||'nbt'; const sub=DOM.fkode_kat?.value||'rmp'; const key=`${kat}-${sub}`; let urut=STATE.kodeCache[key]||1;
+  const existing=STATE.rows.filter(r=> (r.dataset.sub===sub || r.dataset.kode?.includes(`${kat}-${sub}`))).length; if(existing>0) urut=existing+1; STATE.kodeCache[key]=urut;
+  const kode=`${flag}-${kat}-${sub}-${String(urut).padStart(3,'0')}`.toLowerCase(); if(DOM.fkode_auto) DOM.fkode_auto.value=kode; if(DOM.fno_urut) DOM.fno_urut.value=urut;
+}
+let searchTimer;
+function filterTable(){ const q=(DOM.search?.value||'').toLowerCase(); if(!q){ STATE.rows.forEach(r=>r.style.display=''); return; } STATE.rows.forEach(r=>{ const name=r.dataset.name||''; const kode=r.dataset.kode||''; r.style.display=(name.includes(q)||kode.includes(q))?'':'none'; }); }
+function onSearchInput(){ clearTimeout(searchTimer); searchTimer=setTimeout(filterTable,300); }
+function openModal(){ if(DOM.modal) DOM.modal.classList.remove('hidden'); setupEnterNavigation(); setTimeout(()=>{DOM.fhall?.focus();},100); }
+function closeModal(){ if(DOM.modal) DOM.modal.classList.add('hidden'); }
+function setupEnterNavigation(){
+  const fields=Array.from(document.querySelectorAll('#modal .enter-field'));
+  fields.forEach((field,idx)=>{ field.removeEventListener('keydown', field._enterHandler); const handler=(e)=>{ if(e.key==='Enter'){ if(e.shiftKey){ e.preventDefault(); calc(); DOM.form?.requestSubmit(); } else { e.preventDefault(); calc(); const next=fields[idx+1]; if(next){ next.focus(); if(next.select) next.select(); } else { document.querySelector('#bahanForm button[type="submit"]')?.focus(); } } } }; field._enterHandler=handler; field.addEventListener('keydown', handler); });
+}
+function editBahan(b){ if(!b) return; cacheDOM(); if(DOM.fid) DOM.fid.value=b.id||''; if(DOM.fnama) DOM.fnama.value=b.nama_bahan||''; if(DOM.fmerek) DOM.fmerek.value=b.merek||''; if(DOM.fsatuan) DOM.fsatuan.value=b.satuan_default||'Kg'; if(DOM.fstock_awal) DOM.fstock_awal.value=b.stock_qty||0; if(DOM.fharga_awal) DOM.fharga_awal.value=b.harga_per_satuan||0; if(DOM.fharga_baru) DOM.fharga_baru.value=''; if(DOM.fkode_auto) DOM.fkode_auto.value=b.kode_bahan||''; const parts=(b.kode_bahan||'').split('-'); if(parts.length>=3){ const kat=parts[1]; const sub=parts[2]; if(DOM.fkat_utama){ DOM.fkat_utama.value=kat; filterSubKategori(); } setTimeout(()=>{ if(DOM.fkode_kat) DOM.fkode_kat.value=sub; genKode(); },100); } calc(); openModal(); }
+async function deleteBahan(id){ if(!id||!confirm('Hapus bahan ini?')) return; if(!confirm('Yakin?')) return; const res=await fetch(`/api/bahan/${id}`,{method:'DELETE'}); if(res.ok) location.reload(); else alert('Gagal hapus'); }
+document.addEventListener('DOMContentLoaded', ()=>{
+  cacheDOM(); loadKategori();
+  DOM.tbody?.addEventListener('click', e=>{ const eb=e.target.closest('.btn-edit'); const db=e.target.closest('.btn-del'); if(eb){ try{ const b=JSON.parse(eb.getAttribute('data-bahan')); editBahan(b);}catch(err){ console.error(err);} } if(db){ deleteBahan(db.dataset.id);} });
+  DOM.search?.addEventListener('input', onSearchInput);
+  document.querySelectorAll('.calc-trigger').forEach(el=>el.addEventListener('input', calc));
+  DOM.fkode_kat?.addEventListener('change', genKode); DOM.fkat_utama?.addEventListener('change', filterSubKategori); DOM.fhall?.addEventListener('change', genKode);
+  document.getElementById('btnAdd')?.addEventListener('click', openModal); document.getElementById('btnCloseModal')?.addEventListener('click', closeModal);
+  setupEnterNavigation();
+  DOM.form?.addEventListener('submit', e=>{ calc(); if(!DOM.fstock.value||sf(DOM.fstock.value)==0){ const a=sf(DOM.fstock_awal?.value); const t=sf(DOM.ftambah?.value); const pk=sf(DOM.fterpakai?.value); DOM.fstock.value=a+t-pk; } if(!DOM.fharga.value||sf(DOM.fharga.value)==0){ const hb=sf(DOM.fharga_baru?.value); const ha=sf(DOM.fharga_awal?.value); DOM.fharga.value=hb>0?hb:ha; } if(!DOM.fnama?.value.trim()){ e.preventDefault(); alert('Nama Bahan wajib diisi!'); DOM.fnama?.focus(); return false; } });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'&&DOM.modal&&!DOM.modal.classList.contains('hidden')) closeModal(); });
+});
 </script>
 </body>
 </html>
