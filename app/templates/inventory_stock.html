@@ -12,9 +12,9 @@
   input,select{font-weight:500 !important;border:1px solid #E5E7EB !important;color:#374151 !important;background:#fff !important;}
   input:focus,select:focus{border-color:#8a42b9 !important;outline:none;box-shadow:0 0 0 3px rgba(138,66,185,0.12) !important;}
   .enter-field{transition:all 0.15s;}
-  /* FIX Point 2 & 3: Row 30px + garis hitam 0.5px */
+  /* FIX Final: Row 30px + garis abu #d1d5db 1px RECOMMENDED */
   .row-30{height:30px !important; min-height:30px !important; max-height:30px !important;}
-  .row-border-black{border-bottom:0.5px solid #000 !important; outline: 0.5px solid #000; outline-offset:-0.5px;}
+  .row-border-black{border-bottom:1px solid #d1d5db !important;}
 </style>
 </head>
 <body class="bg-[#faf5ff]">
@@ -68,9 +68,9 @@
             <th class="p-3 text-left w-[90px]">Action</th>
           </tr>
         </thead>
-        <tbody id="tbodyBahan" class="divide-y divide-black">
+        <tbody id="tbodyBahan">
         {% for b in bahan %}
-        <!-- FIX Point 2 & 3: height 30px + garis hitam outline -->
+        <!-- FIX Final: height 30px + garis abu #d1d5db 1px -->
         <tr class="row-30 row-border-black hover:bg-purple-50/60 transition-colors row-bahan bg-white" data-id="{{b.id}}" data-name="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }} {{ (b.id_halal or '')|lower }}" data-kat="{{b.kategori_utama or ''}}" data-sub="{{b.kode_kategori or ''}}" data-kode="{{(b.kode_bahan or '')|lower}}" style="height:30px;">
           <td class="p-1 px-2.5"><span class="{% if (b.hall_flag or b.flag or '')|lower == 'hall' or 'hall' in (b.kode_bahan or '')|lower %}bg-green-50 text-green-700 border-green-100{% else %}bg-gray-50 text-gray-600 border-gray-200{% endif %} px-2 py-0.5 rounded-full text-[10px] font-medium border">{{b.hall_flag or b.orgk_flag or b.flag or 'Orgk'}}</span></td>
           <!-- FIX Point 5: ID Halal 19 digit - hanya Hall yang tampil, Orgk kosong -->
