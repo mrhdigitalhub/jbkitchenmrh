@@ -60,6 +60,7 @@
             <th class="p-3 text-left w-[140px]">Kode</th>
             <th class="p-3 text-left">Nama</th>
             <th class="p-3 text-left w-[80px]">Satuan</th>
+            <th class="p-3 text-left w-[100px]">Supplier</th>
             <th class="p-3 text-left w-[80px]">Stock</th>
             <th class="p-3 text-left w-[100px]">Harga</th>
             <th class="p-3 text-left w-[90px]">Action</th>
@@ -76,8 +77,13 @@
             {% else %}<span class="text-gray-300">-</span>{% endif %}
           </td>
           <td class="p-1 px-2.5 font-mono text-[11px] font-medium text-gray-600">{{b.kode_bahan}}</td>
-          <td class="p-1 px-2.5 font-semibold text-gray-800 capitalize text-[12px]">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
+          <td class="p-1 px-2.5 font-semibold text-gray-800 capitalize text-[12px] flex items-center gap-1.5">
+            {{b.nama_bahan|title if b.nama_bahan else ''}}
+            <!-- IKON DETAIL KE HALAMAN BERIKUTNYA - SYNC 1:1 -->
+            <a href="/dashboard/admin/inventory/{{b.id}}" class="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#8a42b9] text-white text-[10px] hover:bg-[#7a3aa8] transition" title="Detail {{b.nama_bahan}}">→</a>
+          </td>
           <td class="p-1 px-2.5 text-[11px]"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100 font-medium">{{b.satuan_default or b.satuan or 'Kg'}}</span></td>
+          <td class="p-1 px-2.5 text-[11px] text-gray-600 max-w-[100px] truncate" title="{{b.supplier or b.nama_supplier or ''}} - {{b.no_hp or ''}} - {{b.alamat or ''}}">{{b.supplier or b.nama_supplier or '-'}}</td>
           <td class="p-1 px-2.5 font-semibold text-gray-700 text-[12px] {% if (b.stock_qty or 0)==0 %}text-red-600{% endif %}">{{b.stock_qty}}</td>
           <td class="p-1 px-2.5 font-mono text-[11px] text-gray-700">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td>
           <td class="p-1 px-2.5">
