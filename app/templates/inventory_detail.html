@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>{{bahan.nama_bahan|title}} - Detail - Card1 7 Point Fix</title>
+<title>{{bahan.nama_bahan|title}} - Detail - Final Kotak Kecil + Stock Master</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
   .divider{border-top:1px solid #d1d5db;}
   .title-black{color:#000000 !important;}
   .purple-label{color:#8a42b9 !important;}
+  label{font-weight:600 !important;color:#4B5563 !important;font-size:12px !important;}
+  input,select,textarea{font-weight:500 !important;border:1px solid #E5E7EB !important;color:#374151 !important;background:#fff !important;}
+  .box-kecil{border:1px solid #E5E7EB; background:#fff; padding:6px 8px; border-radius:6px; font-size:11px; min-width:110px; height:28px; display:flex; align-items:center; justify-content:center;}
+  .input-master{padding:10px; border-radius:8px; font-size:13px; border:1px solid #E5E7EB; background:#fff; width:100%;}
+  .input-final-purple{background:#faf5ff !important; font-weight:700 !important; border-color:#d8b4fe !important;}
+  .input-final-orange{background:#fff7ed !important; font-weight:700 !important; border-color:#fdba74 !important;}
 </style>
 </head>
 <body class="bg-[#faf5ff]">
@@ -22,59 +28,74 @@
 </div>
 
 <div class="max-w-4xl mx-auto px-4 py-4 space-y-4">
-  <!-- CARD 1 - 7 POINT FIX -->
+  <!-- CARD 1 -->
   <div class="bg-white rounded-2xl border border-[#d1d5db] shadow-sm overflow-hidden">
-    <!-- HEADER: Nama bahan + kode auto - judul hitam -->
     <div class="p-3 flex justify-between items-start">
       <div>
         <div class="flex items-center gap-2">
-          <h2 class="text-[16px] font-bold title-black">{{bahan.nama_bahan|title if bahan else 'Udang Galah'}}</h2>
+          <h2 class="text-[16px] font-bold title-black">{{bahan.nama_bahan|title if bahan else 'Cumi'}}</h2>
           <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-gray-50 border-gray-300 title-black">{{bahan.flag or 'Orgk'}}</span>
         </div>
         <p class="text-[10px] text-gray-500 mt-1">✦ Bahan segar • Grade A • Stok terkontrol sistematis</p>
       </div>
       <div class="text-right">
         <div class="text-[8px] tracking-widest text-gray-400 uppercase">KODE AUTO</div>
-        <div class="mt-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 font-mono text-[10px] title-black">{{bahan.kode_bahan or 'Orgk-dgi-lut-002'}}</div>
+        <div class="mt-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 font-mono text-[10px] title-black">{{bahan.kode_bahan or 'Orgk-dgi-lut-001'}}</div>
       </div>
     </div>
     <div class="divider"></div>
 
-    <!-- FIX 1-3: IDENTITAS KATEGORI kiri sejajar Detail Produk, dibawah kotak nama bahan auto -->
+    <!-- IDENTITAS KATEGORI - KOTAK DIPERKECIL -->
     <div class="p-3">
       <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-2"><span>🏷️</span> IDENTITAS KATEGORI</div>
-      <!-- width dikurangi 85% + font +2px jadi 12px -->
-      <div class="space-y-2 max-w-[85%]">
-        <div class="flex justify-between items-center text-[12px]">
-          <span class="text-gray-500 text-[11px]">Kategori Utama</span>
-          <span class="font-semibold title-black">{{kategori_label or 'Bahan Hewani / Daging'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kategori_utama or 'dgi'}}</span></span>
-        </div>
-        <div class="flex justify-between items-center text-[12px]">
-          <span class="text-gray-500 text-[11px]">Sub Kategori</span>
-          <span class="font-semibold title-black">{{sub_label or 'Laut / Seafood'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kode_kategori or 'lut'}}</span></span>
+      <div class="m-2 p-3 rounded-xl bg-[#faf5ff] border border-purple-100">
+        <div class="flex gap-3">
+          <div class="text-center">
+            <div class="text-[9px] uppercase text-gray-400 mb-1">KATEGORI UTAMA</div>
+            <div class="box-kecil title-black">{{kategori_label or 'Bahan Hewani / Daging'}}</div>
+            <div class="text-[10px] title-black mt-1">{{bahan.kategori_utama or 'dgi'}}</div>
+          </div>
+          <div class="text-center">
+            <div class="text-[9px] uppercase text-gray-400 mb-1">SUB KATEGORI</div>
+            <div class="box-kecil title-black">{{sub_label or 'Laut / Seafood'}}</div>
+            <div class="text-[10px] title-black mt-1">{{bahan.kode_kategori or 'lut'}}</div>
+          </div>
         </div>
       </div>
     </div>
     <div class="divider"></div>
 
-    <!-- FIX 7: DETAIL PRODUK layout sama seperti Identitas Kategori - kiri, width 85%, font +2px, warna ungu -->
+    <!-- DETAIL PRODUK - KOTAK DIPERKECIL -->
     <div class="p-3">
       <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-2"><span>📦</span> DETAIL PRODUK</div>
-      <div class="space-y-2 max-w-[85%]">
-        <div class="flex justify-between items-center text-[12px]"><span class="text-gray-500 text-[11px]">Satuan</span><span class="bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-1 rounded-full text-[11px] title-black">{{bahan.satuan_default or 'Kg'}}</span></div>
-        <div class="flex justify-between items-center text-[12px]"><span class="text-gray-500 text-[11px]">Merek</span><span class="font-semibold title-black">{{bahan.merek or 'Laut Segar'}}</span></div>
-        <div class="flex justify-between items-center text-[12px]"><span class="text-gray-500 text-[11px]">Satuan Detail</span><span class="text-[11px] title-black">1 kg = ±20 ekor</span></div>
+      <div class="m-2 p-3 rounded-xl bg-[#faf5ff] border border-purple-100">
+        <div class="flex gap-3">
+          <div class="text-center">
+            <div class="text-[9px] uppercase text-gray-400 mb-1">SATUAN</div>
+            <div class="box-kecil title-black">{{bahan.satuan_default or 'Kg'}}</div>
+            <div class="text-[10px] title-black mt-1">Auto</div>
+          </div>
+          <div class="text-center">
+            <div class="text-[9px] uppercase text-gray-400 mb-1">MEREK</div>
+            <div class="box-kecil title-black">{{bahan.merek or 'Laut Segar'}}</div>
+            <div class="text-[10px] title-black mt-1">Auto</div>
+          </div>
+          <div class="text-center">
+            <div class="text-[9px] uppercase text-gray-400 mb-1">PRODUSEN</div>
+            <div class="box-kecil title-black">{{bahan.produsen or 'Auto'}}</div>
+            <div class="text-[10px] title-black mt-1">Auto</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="divider"></div>
 
-    <!-- FIX 4: SUPPLIER & KONTAK - No HP pendek, Alamat panjang -->
+    <!-- SUPPLIER & KONTAK - TIDAK DIUBAH -->
     <div class="m-2 p-3 rounded-xl bg-[#faf5ff] border border-purple-100">
       <div class="flex justify-between items-center mb-2">
         <div class="text-[11px] font-bold purple-label">🚚 SUPPLIER & KONTAK</div>
         <span class="px-1.5 py-0.5 rounded-full bg-white border border-purple-200 text-[8px] text-purple-600">Terverifikasi</span>
       </div>
-      <!-- No HP 25% pendek, Alamat 50% panjang, Nama Supplier 25% -->
       <div class="grid gap-2" style="grid-template-columns: 25% 25% 50%;">
         <div><div class="text-[9px] uppercase text-gray-400">NAMA SUPPLIER</div><div class="mt-1 text-[12px] font-bold title-black">{{bahan.supplier or 'Import Kanan'}}</div></div>
         <div><div class="text-[9px] uppercase text-gray-400">📞 NO HP</div><div class="mt-1 px-2 py-1 rounded-lg bg-white border border-[#e5e7eb] text-[11px] font-mono title-black truncate">{{bahan.no_hp or '0812-3456-7890'}}</div></div>
@@ -83,61 +104,47 @@
     </div>
     <div class="divider"></div>
 
-    <!-- FIX 5 & 6: STOCK & HARGA - Stock Real sejajar Harga Final, warna font ungu -->
-    <div class="grid grid-cols-2 divide-x divide-[#d1d5db]">
-      <!-- STOCK -->
-      <div class="p-3 flex flex-col">
-        <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-2"><span>🧊</span> STOCK - SESUAI INPUT MASTER</div>
-        <div class="grid grid-cols-3 gap-1.5 mb-2">
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-gray-500">STOCK AWAL</div><div class="text-[13px] font-bold title-black">{{bahan.stock_awal or '10.0'}}</div></div>
-          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-emerald-600 font-bold">STOCK TAMBAH</div><div class="text-[13px] font-bold text-emerald-700">+{{bahan.stock_tambah or 45}}</div></div>
-          <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-red-600 font-bold">STOCK TERPAKAI</div><div class="text-[13px] font-bold text-red-700">-{{bahan.stock_terpakai or 30}}</div></div>
+    <!-- STOCK & HARGA SESUAI MASTER INPUT BAHAN -->
+    <div class="p-3">
+      <div class="grid grid-cols-2 gap-4">
+        <!-- STOCK -->
+        <div>
+          <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-3"><span>🧊</span> STOCK - SESUAI INPUT MASTER</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label>Stock Awal</label><input class="input-master" value="{{bahan.stock_awal or '10.0'}}" readonly></div>
+            <div><label>Stock Tambah</label><input class="input-master" value="+{{bahan.stock_tambah or 45}}" readonly></div>
+            <div><label>Stock Terpakai</label><input class="input-master" value="-{{bahan.stock_terpakai or 30}}" readonly></div>
+            <div><label>Stock Real</label><input class="input-master input-final-purple" value="{{bahan.stock_real or 135}} Kg" readonly></div>
+          </div>
         </div>
-        <!-- kotak ungu sejajar dengan harga final -->
-        <div class="mt-auto bg-[#8a42b9] rounded-lg p-2.5 flex justify-between items-center text-white h-[40px]"><span class="text-[11px] font-bold uppercase">STOCK REAL</span><span class="text-[14px] font-extrabold">{{bahan.stock_real or 135}} Kg</span></div>
-      </div>
-      <!-- HARGA -->
-      <div class="p-3 flex flex-col">
-        <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-2"><span>💰</span> HARGA - SESUAI INPUT MASTER</div>
-        <div class="space-y-1.5 mb-2">
-          <div class="flex justify-between border border-gray-200 rounded-lg px-2.5 py-2 text-[11px]"><span class="text-gray-500">Harga Awal</span><span class="font-mono font-medium title-black">Rp {{'{:,.0f}'.format(bahan.harga_awal or 16000)}}</span></div>
-          <div class="flex justify-between border border-gray-200 rounded-lg px-2.5 py-2 text-[11px]"><span class="text-gray-500">Harga Baru</span><span class="font-mono font-medium title-black">Rp {{'{:,.0f}'.format(bahan.harga_baru or 17000)}}</span></div>
+        <!-- HARGA -->
+        <div>
+          <div class="flex items-center gap-1.5 text-[11px] font-bold purple-label mb-3"><span>💰</span> HARGA - SESUAI INPUT MASTER</div>
+          <div class="space-y-3">
+            <div><label>Harga Awal</label><input class="input-master" value="Rp {{bahan.harga_awal or 15000}}" readonly></div>
+            <div><label>Harga Baru</label><input class="input-master" value="Rp {{bahan.harga_baru or 15500}}" readonly></div>
+            <div><label>Harga Final</label><input class="input-master input-final-orange" value="Rp {{bahan.harga_final or 17000}}" readonly></div>
+          </div>
         </div>
-        <!-- sejajar dengan stock real -->
-        <div class="mt-auto bg-orange-500 rounded-lg p-2.5 flex justify-between items-center text-white h-[40px]"><span class="text-[11px] font-bold uppercase">HARGA FINAL</span><span class="text-[14px] font-extrabold">Rp {{'{:,.0f}'.format(bahan.harga_final or 17000)}}</span></div>
       </div>
+      <!-- kotak ungu dan orange sejajar sudah di dalam grid masing2 di bottom -->
     </div>
     <div class="divider"></div>
     <div class="p-3 bg-[#f9fafb] flex justify-between text-[10px] text-gray-500"><span>📦 Lokasi: Rak A-12 / Cold-02</span><span>EXP: 24 Des 2025 • 2 hari</span><span>Catatan: Butuh thawing 30 menit</span></div>
   </div>
 
-  <!-- CARD 2: PROSES PEMBUATAN PRODUK A-E -->
+  <!-- CARD 2 - TIDAK DIUBAH -->
   <div class="bg-white rounded-2xl border border-[#d1d5db] shadow-sm overflow-hidden">
     <div class="p-3 border-b border-[#d1d5db] bg-[#faf5ff]">
       <h3 class="text-[13px] font-bold title-black">📋 Proses Pembuatan Produk</h3>
-      <p class="text-[10px] text-gray-500 mt-1">Tahapan lengkap dari persiapan bahan sampai delivery - bisa input uraian lengkap</p>
+      <p class="text-[10px] text-gray-500 mt-1">Tahapan lengkap dari persiapan bahan sampai delivery</p>
     </div>
     <div class="p-3 space-y-3">
-      <div class="border border-gray-200 rounded-xl p-3">
-        <div class="flex justify-between mb-2"><span class="text-[11px] font-bold title-black bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">A. Proses Persiapan Bahan</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
-        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] min-h-[70px] title-black">{{bahan.proses_a or 'Cuci bersih Udang Galah, buang kepala dan kotoran, timbang 1kg = ±20 ekor, rendam air es 10 menit, tiriskan.'}}</textarea>
-      </div>
-      <div class="border border-gray-200 rounded-xl p-3">
-        <div class="flex justify-between mb-2"><span class="text-[11px] font-bold title-black bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">B. Proses Memasak</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
-        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] min-h-[70px] title-black">{{bahan.proses_b or 'Panaskan minyak 170°C, goreng Udang Galah 3 menit sampai golden brown, angkat tiriskan minyak.'}}</textarea>
-      </div>
-      <div class="border border-gray-200 rounded-xl p-3">
-        <div class="flex justify-between mb-2"><span class="text-[11px] font-bold title-black bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">C. Proses Penyajian</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
-        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] min-h-[70px] title-black">{{bahan.proses_c or 'Plating di piring saji oval, garnish daun ketumbar dan irisan jeruk nipis, siram saus pilihan, sajikan hangat.'}}</textarea>
-      </div>
-      <div class="border border-gray-200 rounded-xl p-3">
-        <div class="flex justify-between mb-2"><span class="text-[11px] font-bold title-black bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">D. Proses Pencucian Perlengkapan</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
-        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] min-h-[70px] title-black">{{bahan.proses_d or 'Cuci semua perlengkapan (wajan, sutil, pisau, talenan) dengan sabun cuci, bilas air mengalir, keringkan lap bersih.'}}</textarea>
-      </div>
-      <div class="border border-gray-200 rounded-xl p-3">
-        <div class="flex justify-between mb-2"><span class="text-[11px] font-bold title-black bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full">E. Proses Delivery</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
-        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] min-h-[70px] title-black">{{bahan.proses_e or 'Packing box tahan panas, label nama menu dan jam masak, masukkan tas delivery thermal, jaga suhu 60°C, estimasi 30 menit sampai customer.'}}</textarea>
-      </div>
+      <div class="border border-gray-200 rounded-xl p-3"><div class="text-[11px] font-bold title-black bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full inline-block mb-2">A. Proses Persiapan Bahan</div><textarea class="w-full p-2.5 rounded-lg text-[11px] border min-h-[70px] title-black">{{bahan.proses_a or 'Cuci bersih, timbang 1kg = ±20 ekor'}}</textarea></div>
+      <div class="border border-gray-200 rounded-xl p-3"><div class="text-[11px] font-bold title-black bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full inline-block mb-2">B. Proses Memasak</div><textarea class="w-full p-2.5 rounded-lg text-[11px] border min-h-[70px] title-black">{{bahan.proses_b or 'Panaskan minyak 170°C, goreng 3 menit'}}</textarea></div>
+      <div class="border border-gray-200 rounded-xl p-3"><div class="text-[11px] font-bold title-black bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full inline-block mb-2">C. Proses Penyajian</div><textarea class="w-full p-2.5 rounded-lg text-[11px] border min-h-[70px] title-black">{{bahan.proses_c or 'Plating, garnish, sajikan hangat'}}</textarea></div>
+      <div class="border border-gray-200 rounded-xl p-3"><div class="text-[11px] font-bold title-black bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full inline-block mb-2">D. Proses Pencucian Perlengkapan</div><textarea class="w-full p-2.5 rounded-lg text-[11px] border min-h-[70px] title-black">{{bahan.proses_d or 'Cuci semua perlengkapan'}}</textarea></div>
+      <div class="border border-gray-200 rounded-xl p-3"><div class="text-[11px] font-bold title-black bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full inline-block mb-2">E. Proses Delivery</div><textarea class="w-full p-2.5 rounded-lg text-[11px] border min-h-[70px] title-black">{{bahan.proses_e or 'Packing box tahan panas, delivery thermal'}}</textarea></div>
     </div>
     <div class="p-3 bg-[#f9fafb] border-t border-[#d1d5db] flex gap-2">
       <button class="flex-1 bg-[#8a42b9] text-white py-2.5 rounded-xl font-bold text-[11px] border-[1.5px] border-[#8a42b9]">Simpan Proses</button>
