@@ -415,10 +415,20 @@ async def root(request: Request): return RedirectResponse("/dashboard/admin")
 
 @app.get("/dashboard/admin", response_class=HTMLResponse)
 async def dashboard_admin(request: Request):
-    stats = await stats_realtime()
-    if templates is None:
-        return HTMLResponse(f"<h1>JB KITCHEN MRH</h1><pre>{json.dumps(stats, indent=2)}</pre>")
-    return templates.TemplateResponse(request, "dashboard_admin.html", {"request": request, **stats})
+    try:
+        stats = await stats_realtime()
+        # Debug: jika stats error
+        if "error" in stats and stats.get("total_bahan", 0) == 0:
+            print(f"[ADMIN ERROR] {stats.get('error')}")
+        if templates is None:
+            return HTMLResponse(f"<h1>JB KITCHEN MRH - Templates NOT FOUND</h1><pre>{json.dumps(stats, indent=2, default=str)}</pre><p>Candidates checked: {templates_candidates if 'templates_candidates' in globals() else 'unknown'}</p>")
+        # Pastikan dashboard_admin.html ada
+        return templates.TemplateResponse(request, "dashboard_admin.html", {"request": request, **stats})
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[ADMIN CRASH] {e}\n{tb}")
+        return HTMLResponse(f"<h1>JB KITCHEN MRH - ERROR DEBUG</h1><h3>Error: {e}</h3><pre>{tb}</pre><hr><pre>ENV SUPABASE_URL set: {bool(os.getenv('SUPABASE_URL'))} | SUPABASE_KEY set: {bool(os.getenv('SUPABASE_KEY'))}</pre>", status_code=500)
 
 @app.get("/dashboard/admin/inventory/save", response_class=HTMLResponse)
 async def inv_save_dummy(): return RedirectResponse("/dashboard/admin/inventory")
