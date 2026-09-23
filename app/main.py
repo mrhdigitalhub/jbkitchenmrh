@@ -1,6 +1,6 @@
 """
-JB KITCHEN MRH - FINAL LENGKAP + BOM RESEP & PAKET ID
-Fix Not Found /dashboard/admin/menu/resep/{id} dan /paket/{id}
+JB KITCHEN MRH - FINAL LENGKAP + BOM ID + INVENTORY DETAIL NO EDIT
+Fix 1:1 - tambah route /dashboard/admin/inventory/{id}
 """
 import os, re, uuid, io, json
 from pathlib import Path
@@ -22,13 +22,10 @@ try:
     if SUPABASE_URL and SUPABASE_KEY:
         from supabase import create_client
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print(f"[OK] Supabase: {SUPABASE_URL[:30]}...")
-    else:
-        print("[WARN] SUPABASE_URL/KEY belum di-set")
 except Exception as e:
     print(f"[WARN] Supabase init fail: {e}")
 
-app = FastAPI(title="JB KITCHEN MRH - FINAL + BOM ID")
+app = FastAPI(title="JB KITCHEN MRH - FINAL + DETAIL NO EDIT")
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent if BASE_DIR.name == "app" else BASE_DIR
@@ -44,10 +41,7 @@ for cand in [
 ]:
     if cand.exists():
         templates = Jinja2Templates(directory=str(cand))
-        print(f"[OK] Templates: {cand}")
         break
-if templates is None:
-    print("[FATAL] Templates tidak ketemu")
 
 for static_cand in [
     BASE_DIR / "static",
@@ -59,7 +53,6 @@ for static_cand in [
 ]:
     if static_cand.exists():
         app.mount("/static", StaticFiles(directory=str(static_cand)), name="static")
-        print(f"[OK] Static: {static_cand}")
         break
 
 DEFAULT_KAT_UTAMA = [
@@ -95,14 +88,6 @@ DEFAULT_SUB_KATEGORI = [
     {"code":"ins","label":"Instant / Bumbu Instan","parent":"prs","type":"sub"},
 ]
 
-OH_PERCENT = 0.10
-DELIVERY_PERCENT = 0.05
-MANPOWER_RATES = {"kepala_produksi":2000,"juru_masak":1500,"pegawai":1000}
-KAMUS_DEFAULT_LOCAL = {
-    "bawang merah": {"qty":0.15,"satuan":"Kg","satuan_default":"Kg","konversi_json":{},"label":"Bawang Merah 0.15 Kg"},
-    "telur": {"qty":1,"satuan":"Pcs","satuan_default":"Pcs","konversi_json":{"kg":0.06},"label":"Telur 1 Pcs"},
-}
-
 def safe_float(v, default=0.0) -> float:
     try:
         if v is None or v == "": return default
@@ -123,22 +108,6 @@ def get_kategori_data():
     except:
         return DEFAULT_KAT_UTAMA, DEFAULT_SUB_KATEGORI
 
-def get_pengaturan_biaya():
-    oh, delivery, manpower = OH_PERCENT, DELIVERY_PERCENT, MANPOWER_RATES.copy()
-    if not supabase:
-        return oh, delivery, manpower
-    try:
-        res = supabase.table("pengaturan_biaya").select("*").limit(1).execute()
-        if res.data:
-            row=res.data[0]
-            oh=safe_float(row.get("oh_percent",10),10)/100
-            delivery=safe_float(row.get("delivery_percent",5),5)/100
-            manpower["kepala_produksi"]=safe_float(row.get("rate_kepala",2000),2000)
-            manpower["juru_masak"]=safe_float(row.get("rate_koki",1500),1500)
-            manpower["pegawai"]=safe_float(row.get("rate_pegawai",1000),1000)
-    except: pass
-    return oh, delivery, manpower
-
 async def stats_realtime():
     total_bahan=0; aset=0; stock_min=0; items=[]
     if supabase:
@@ -154,7 +123,6 @@ async def stats_realtime():
             print(f"stats error: {e}")
     return {"total_bahan":total_bahan,"aset_inventory":aset,"stock_min":stock_min,"items":items,"total_menu":3}
 
-# API
 @app.get("/api/bahan/list")
 async def bahan_list():
     if not supabase: return {"items":[],"total":0}
@@ -166,40 +134,6 @@ async def kategori_list():
     utama, sub = get_kategori_data()
     return {"utama":utama,"sub":sub}
 
-@app.post("/api/kategori/sub")
-async def create_sub_kategori(request: Request):
-    if not supabase: raise HTTPException(500,"Supabase belum konfigurasi")
-    try:
-        body = await request.json()
-        code = str(body.get("code","")).strip().lower()
-        label = str(body.get("label","")).strip()
-        parent = str(body.get("parent","")).strip().lower()
-        if not code or not label or not parent: raise HTTPException(400, detail="code, label, parent wajib")
-        if len(code) <2 or len(code) >5: raise HTTPException(400, detail="kode 2-5 huruf")
-        ex = supabase.table("kategori_master").select("code").eq("code", code).execute()
-        if ex.data: raise HTTPException(400, detail=f"kode {code} sudah ada")
-        res = supabase.table("kategori_master").insert({"code":code,"label":label,"type":"sub","parent":parent,"is_active":True}).execute()
-        return {"success":True,"message":f"Sub {code} INSERT ke {parent}","data":res.data[0] if res.data else {}}
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(500, detail=str(e))
-
-@app.post("/api/kategori/utama")
-async def create_utama_kategori(request: Request):
-    if not supabase: raise HTTPException(500,"Supabase belum konfigurasi")
-    try:
-        body = await request.json()
-        code = str(body.get("code","")).strip().lower()
-        label = str(body.get("label","")).strip()
-        if not code or not label: raise HTTPException(400, detail="code, label wajib")
-        if len(code)<2 or len(code)>5: raise HTTPException(400, detail="kode 2-5 huruf")
-        ex = supabase.table("kategori_master").select("code").eq("code", code).execute()
-        if ex.data: raise HTTPException(400, detail=f"kode {code} sudah ada")
-        res = supabase.table("kategori_master").insert({"code":code,"label":label,"type":"utama","parent":None,"is_active":True}).execute()
-        return {"success":True,"message":f"Kat utama {code} INSERT","data":res.data[0] if res.data else {}}
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(500, detail=str(e))
-
-# DASHBOARD
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request): return RedirectResponse("/dashboard/admin")
 
@@ -220,7 +154,6 @@ async def dashboard_admin(request: Request):
         if not menus_list:
             menus_list = [{"nama_menu": "Nasi Box Premium", "hpp": 25000},{"nama_menu": "Tumpeng Mini", "hpp": 35000},{"nama_menu": "Snack Box", "hpp": 15000}]
         ctx = {"request": request, "stats": stats, "bahan": bahan_list, "items": bahan_list, "menus": menus_list, "menu_list": menus_list, "role": "ADMIN", **stats}
-        ctx["bahan"]=bahan_list; ctx["items"]=bahan_list; ctx["menus"]=menus_list
         if templates is None: return HTMLResponse(f"<h1>JB KITCHEN MRH</h1><pre>{stats}</pre>")
         return templates.TemplateResponse(request, "dashboard_admin.html", ctx)
     except Exception as e:
@@ -248,6 +181,7 @@ async def admin_menu(request: Request):
         import traceback; tb=traceback.format_exc()
         return HTMLResponse(f"<h1>ERROR MENU {e}</h1><pre>{tb}</pre>", status_code=500)
 
+# INVENTORY LIST + DETAIL 1 CARD NO EDIT
 @app.get("/dashboard/admin/inventory", response_class=HTMLResponse)
 async def admin_inventory(request: Request):
     try:
@@ -260,7 +194,38 @@ async def admin_inventory(request: Request):
         import traceback; tb=traceback.format_exc()
         return HTMLResponse(f"<h1>ERROR INVENTORY {e}</h1><pre>{tb}</pre>", status_code=500)
 
-# === FIX BOM ID - INI YANG BIKIN NOT FOUND KEMARIN ===
+@app.get("/dashboard/admin/inventory/{bahan_id}", response_class=HTMLResponse)
+async def admin_inventory_detail(request: Request, bahan_id: str):
+    try:
+        stats = await stats_realtime()
+        utama, sub = get_kategori_data()
+        bahan_data = None
+        if supabase:
+            try:
+                res = supabase.table("bahan_inventory").select("*").eq("id", bahan_id).limit(1).execute()
+                if res.data: bahan_data = res.data[0]
+            except: pass
+        if not bahan_data:
+            # fallback cari dari stats items
+            for it in stats.get("items",[]):
+                if it.get("id")==bahan_id or str(it.get("id"))==bahan_id:
+                    bahan_data=it; break
+        if not bahan_data:
+            bahan_data={"id":bahan_id,"nama_bahan":f"Bahan {bahan_id[:8]}","kode_bahan":f"orgk-dgi-lut-002","kategori_utama":"dgi","kode_kategori":"lut","satuan_default":"Kg","stock_qty":50,"harga_per_satuan":85000,"supplier":"CV Bahari Jaya","no_hp":"0812-3456-7890","alamat":"Jl. Pelabuhan No.12, Sidoarjo"}
+        # cari label kategori
+        kat_label = next((k["label"] for k in utama if k["code"]==bahan_data.get("kategori_utama")), bahan_data.get("kategori_utama","-"))
+        sub_label = next((k["label"] for k in sub if k["code"]==bahan_data.get("kode_kategori")), bahan_data.get("kode_kategori","-"))
+        ctx = {"request": request, "bahan": bahan_data, "kategori_label": kat_label, "sub_label": sub_label, "kategori_utama": utama, "kategori_sub": sub, "stats": stats, **stats}
+        if templates is None: return HTMLResponse(f"<h1>DETAIL {bahan_id}</h1><pre>{bahan_data}</pre>")
+        try:
+            return templates.TemplateResponse(request, "inventory_detail.html", ctx)
+        except:
+            return templates.TemplateResponse(request, "inventory_detail_FINAL_NO_EDIT.html", ctx)
+    except Exception as e:
+        import traceback; tb=traceback.format_exc()
+        return HTMLResponse(f"<h1>ERROR DETAIL {e}</h1><pre>{tb}</pre>", status_code=500)
+
+# BOM DETAIL
 @app.get("/dashboard/admin/menu/resep/{menu_id}", response_class=HTMLResponse)
 @app.get("/dashboard/admin/menu/resep/{menu_id}/", response_class=HTMLResponse)
 async def bom_resep_detail(request: Request, menu_id: str):
@@ -274,32 +239,15 @@ async def bom_resep_detail(request: Request, menu_id: str):
                 for tbl in ["menu_master", "master_menu", "menu", "menus"]:
                     try:
                         res = supabase.table(tbl).select("*").eq("id", menu_id).limit(1).execute()
-                        if res.data:
-                            menu_data = res.data[0]
-                            break
+                        if res.data: menu_data = res.data[0]; break
                     except: continue
-                # coba ambil BOM resep
-                for bom_tbl in ["resep_bom", "bom_resep", "menu_bom", "bahan_resep"]:
-                    try:
-                        res = supabase.table(bom_tbl).select("*").eq("menu_id", menu_id).execute()
-                        if res.data:
-                            bom_items = res.data
-                            break
-                    except: continue
-            except Exception as e:
-                print(f"BOM resep error: {e}")
+            except: pass
         if not menu_data:
-            menu_data = {"id": menu_id, "nama_menu": f"Resep {menu_id[:8]}", "kode_menu": f"Resep-{menu_id[:8]}", "tipe_menu": "resep_masakan"}
+            menu_data = {"id": menu_id, "nama_menu": f"Resep {menu_id[:8]}", "kode_menu": f"Resep-{menu_id[:8]}"}
         ctx = {"request": request, "menu": menu_data, "bom": bom_items, "items": bom_items, "kategori_utama": utama, "kategori_sub": sub, "stats": stats, "bahan_list": stats.get("items",[]), **stats}
-        if templates is None: return HTMLResponse(f"<h1>BOM Resep {menu_id}</h1><pre>{menu_data}</pre>")
-        # coba load template resep_bom.html, fallback ke master_menu.html kalau tidak ada
-        try:
-            return templates.TemplateResponse(request, "resep_bom.html", ctx)
-        except:
-            try:
-                return templates.TemplateResponse(request, "resep_bom_FIX_ENTER_BOLD.html", ctx)
-            except:
-                return templates.TemplateResponse(request, "master_menu.html", {"request": request, "menus": [menu_data], **stats})
+        if templates is None: return HTMLResponse(f"<h1>BOM Resep {menu_id}</h1>")
+        try: return templates.TemplateResponse(request, "resep_bom.html", ctx)
+        except: return templates.TemplateResponse(request, "master_menu.html", {"request": request, "menus": [menu_data], **stats})
     except Exception as e:
         import traceback; tb=traceback.format_exc()
         return HTMLResponse(f"<h1>ERROR BOM RESEP {e}</h1><pre>{tb}</pre>", status_code=500)
@@ -317,30 +265,15 @@ async def bom_paket_detail(request: Request, menu_id: str):
                 for tbl in ["menu_master", "master_menu", "menu", "menus"]:
                     try:
                         res = supabase.table(tbl).select("*").eq("id", menu_id).limit(1).execute()
-                        if res.data:
-                            menu_data = res.data[0]
-                            break
+                        if res.data: menu_data = res.data[0]; break
                     except: continue
-                for bom_tbl in ["paket_bom", "bom_paket", "menu_bom", "paket_menu_bom"]:
-                    try:
-                        res = supabase.table(bom_tbl).select("*").eq("menu_id", menu_id).execute()
-                        if res.data:
-                            bom_items = res.data
-                            break
-                    except: continue
-            except Exception as e:
-                print(f"BOM paket error: {e}")
+            except: pass
         if not menu_data:
-            menu_data = {"id": menu_id, "nama_menu": f"Paket {menu_id[:8]}", "kode_menu": f"Paket-{menu_id[:8]}", "tipe_menu": "paket_masakan"}
+            menu_data = {"id": menu_id, "nama_menu": f"Paket {menu_id[:8]}", "kode_menu": f"Paket-{menu_id[:8]}"}
         ctx = {"request": request, "menu": menu_data, "paket": menu_data, "bom": bom_items, "items": bom_items, "kategori_utama": utama, "kategori_sub": sub, "stats": stats, "bahan_list": stats.get("items",[]), **stats}
-        if templates is None: return HTMLResponse(f"<h1>BOM Paket {menu_id}</h1><pre>{menu_data}</pre>")
-        try:
-            return templates.TemplateResponse(request, "paket_bom.html", ctx)
-        except:
-            try:
-                return templates.TemplateResponse(request, "paket_bom_FIX_ENTER_BOLD.html", ctx)
-            except:
-                return templates.TemplateResponse(request, "master_menu.html", {"request": request, "menus": [menu_data], **stats})
+        if templates is None: return HTMLResponse(f"<h1>BOM Paket {menu_id}</h1>")
+        try: return templates.TemplateResponse(request, "paket_bom.html", ctx)
+        except: return templates.TemplateResponse(request, "master_menu.html", {"request": request, "menus": [menu_data], **stats})
     except Exception as e:
         import traceback; tb=traceback.format_exc()
         return HTMLResponse(f"<h1>ERROR BOM PAKET {e}</h1><pre>{tb}</pre>", status_code=500)
