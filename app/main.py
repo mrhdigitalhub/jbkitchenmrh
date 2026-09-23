@@ -428,6 +428,73 @@ async def kategori_list():
     utama, sub = get_kategori_data()
     return {"utama":utama,"sub":sub}
 
+# ================= OPSI C 1:1 - TAMBAHAN TANPA POTONG ROUTE LAMA =================
+@app.post("/api/kategori/sub")
+async def create_sub_kategori(request: Request):
+    """Opsi C: INSERT sub kategori baru ke kategori_master - distinct pck vs plk"""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase belum konfigurasi")
+    try:
+        body = await request.json()
+        code = str(body.get("code","")).strip().lower()
+        label = str(body.get("label","")).strip()
+        parent = str(body.get("parent","")).strip().lower()
+        if not code or not label or not parent:
+            raise HTTPException(status_code=400, detail="code, label, parent wajib diisi")
+        if len(code) < 2 or len(code) > 5:
+            raise HTTPException(status_code=400, detail="kode harus 2-5 huruf")
+        # cek duplikat
+        ex = supabase.table("kategori_master").select("code").eq("code", code).execute()
+        if ex.data:
+            raise HTTPException(status_code=400, detail=f"kode {code} sudah ada")
+        # cek parent ada di utama
+        p_ex = supabase.table("kategori_master").select("code").eq("code", parent).eq("type","utama").execute()
+        if not p_ex.data and parent not in [k["code"] for k in DEFAULT_KAT_UTAMA]:
+            # tetap allow kalau parent dari DEFAULT walau belum di DB
+            pass
+        res = supabase.table("kategori_master").insert({
+            "code": code,
+            "label": label,
+            "type": "sub",
+            "parent": parent,
+            "is_active": True
+        }).execute()
+        return {"success": True, "message": f"Sub {code} berhasil INSERT ke parent {parent}", "data": res.data[0] if res.data else {}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/kategori/utama")
+async def create_utama_kategori(request: Request):
+    """Opsi C: INSERT kategori utama baru ke kategori_master"""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase belum konfigurasi")
+    try:
+        body = await request.json()
+        code = str(body.get("code","")).strip().lower()
+        label = str(body.get("label","")).strip()
+        if not code or not label:
+            raise HTTPException(status_code=400, detail="code, label wajib diisi")
+        if len(code) < 2 or len(code) > 5:
+            raise HTTPException(status_code=400, detail="kode harus 2-5 huruf")
+        ex = supabase.table("kategori_master").select("code").eq("code", code).execute()
+        if ex.data:
+            raise HTTPException(status_code=400, detail=f"kode {code} sudah ada")
+        res = supabase.table("kategori_master").insert({
+            "code": code,
+            "label": label,
+            "type": "utama",
+            "parent": None,
+            "is_active": True
+        }).execute()
+        return {"success": True, "message": f"Kat utama {code} berhasil INSERT", "data": res.data[0] if res.data else {}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+# ================= END OPSI C =================
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request): return RedirectResponse("/dashboard/admin")
 
