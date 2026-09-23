@@ -1,3 +1,27 @@
+# Python & Venv
 venv/
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+.venv
+
+# Environment & Secrets
 .env
+.env.local
+.env.example
+
+# Vercel - WAJIB DI-IGNORE
+.vercel
+.vercel_build_output
+
+# OS & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
