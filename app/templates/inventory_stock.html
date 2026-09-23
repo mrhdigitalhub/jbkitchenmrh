@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Inventory Master Bahan - 49 Bahan - FINAL 10 POINT 1:1</title>
+<title>Inventory Master Bahan - 49 Bahan - FINAL FIX ICON 1.5pt</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
   label{font-weight:600 !important;color:#4B5563 !important;font-size:12px !important;}
@@ -14,7 +14,6 @@
   .enter-field{transition:all 0.15s;}
   .row-30{height:30px !important; min-height:30px !important; max-height:30px !important;}
   .row-border{border-bottom:1px solid #d1d5db !important;}
-  /* Tombol ketebalan sama 1.5px border */
   .btn-ungu{border:1.5px solid #8a42b9 !important; background:#8a42b9 !important; color:#fff !important;}
   .btn-orange{border:1.5px solid #fdba74 !important; background:#fff7ed !important; color:#c2410c !important;}
 </style>
@@ -30,11 +29,11 @@
       <a href="/dashboard/admin/menu"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>🍱</span> Master Menu</li></a>
     </ul>
     <div class="mt-5 p-3 bg-green-50 rounded-lg text-[11px] border border-green-100 text-green-800 leading-relaxed">
-      <div class="font-semibold mb-1">✅ Final 10 Point 1:1:</div>
-      <div>✓ Flag fix, Sapi (sap) fix</div>
-      <div>✓ No Urut hide, garis #d1d5db</div>
-      <div>✓ Supplier - HP - Alamat</div>
-      <div>✓ Simpan=Batal ketebalan sama</div>
+      <div class="font-semibold mb-1">✅ Final Fix Icon 1.5pt:</div>
+      <div>✓ Icon → pindah Action</div>
+      <div>✓ Border 1.5pt</div>
+      <div>✓ Supplier sync</div>
+      <div>✓ Garis #d1d5db 1px</div>
     </div>
     <a href="/" class="block mt-5 text-gray-400 text-[12px] hover:text-gray-600">Logout</a>
   </nav>
@@ -63,7 +62,7 @@
             <th class="p-3 text-left w-[100px]">Supplier</th>
             <th class="p-3 text-left w-[80px]">Stock</th>
             <th class="p-3 text-left w-[100px]">Harga</th>
-            <th class="p-3 text-left w-[90px]">Action</th>
+            <th class="p-3 text-left w-[120px]">Action</th>
           </tr>
         </thead>
         <tbody id="tbodyBahan">
@@ -72,24 +71,19 @@
           <td class="p-1 px-2.5"><span class="{% if (b.hall_flag or b.flag or '')|lower == 'hall' or 'hall' in (b.kode_bahan or '')|lower %}bg-green-50 text-green-700 border-green-100{% else %}bg-gray-50 text-gray-600 border-gray-200{% endif %} px-2 py-0.5 rounded-full text-[10px] font-medium border">{{b.hall_flag or b.orgk_flag or b.flag or 'Orgk'}}</span></td>
           <td class="p-1 px-2.5 font-mono text-[11px] text-gray-700">
             {% set is_hall = (b.hall_flag or b.flag or '')|lower == 'hall' or 'hall' in (b.kode_bahan or '')|lower %}
-            {% if is_hall %}
-              {% if b.id_halal or b.halal_id or b.nomor_halal %}{{b.id_halal or b.halal_id or b.nomor_halal}}{% else %}ID12345257836995533{% endif %}
-            {% else %}<span class="text-gray-300">-</span>{% endif %}
+            {% if is_hall %}{% if b.id_halal or b.halal_id or b.nomor_halal %}{{b.id_halal or b.halal_id or b.nomor_halal}}{% else %}ID12345257836995533{% endif %}{% else %}<span class="text-gray-300">-</span>{% endif %}
           </td>
           <td class="p-1 px-2.5 font-mono text-[11px] font-medium text-gray-600">{{b.kode_bahan}}</td>
-          <td class="p-1 px-2.5 font-semibold text-gray-800 capitalize text-[12px] flex items-center gap-1.5">
-            {{b.nama_bahan|title if b.nama_bahan else ''}}
-            <!-- IKON DETAIL KE HALAMAN BERIKUTNYA - SYNC 1:1 -->
-            <a href="/dashboard/admin/inventory/{{b.id}}" class="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#8a42b9] text-white text-[10px] hover:bg-[#7a3aa8] transition" title="Detail {{b.nama_bahan}}">→</a>
-          </td>
+          <td class="p-1 px-2.5 font-semibold text-gray-800 capitalize text-[12px]">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
           <td class="p-1 px-2.5 text-[11px]"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100 font-medium">{{b.satuan_default or b.satuan or 'Kg'}}</span></td>
-          <td class="p-1 px-2.5 text-[11px] text-gray-600 max-w-[100px] truncate" title="{{b.supplier or b.nama_supplier or ''}} - {{b.no_hp or ''}} - {{b.alamat or ''}}">{{b.supplier or b.nama_supplier or '-'}}</td>
+          <td class="p-1 px-2.5 text-[11px] text-gray-600 max-w-[100px] truncate" title="{{b.supplier or b.nama_supplier or ''}}">{{b.supplier or b.nama_supplier or '-'}}</td>
           <td class="p-1 px-2.5 font-semibold text-gray-700 text-[12px] {% if (b.stock_qty or 0)==0 %}text-red-600{% endif %}">{{b.stock_qty}}</td>
           <td class="p-1 px-2.5 font-mono text-[11px] text-gray-700">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td>
           <td class="p-1 px-2.5">
-            <div class="flex gap-1">
-              <button class="btn-edit bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-100 p-1 rounded-md transition-colors" data-bahan='{{ b|tojson }}' title="Edit {{b.nama_bahan}}">✏️</button>
-              <button class="btn-del bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-1 rounded-md transition-colors" data-id="{{b.id}}" title="Hapus {{b.nama_bahan}}">🗑️</button>
+            <div class="flex gap-1 items-center">
+              <button class="btn-edit bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-100 p-1 rounded-md" data-bahan='{{ b|tojson }}'>✏️</button>
+              <button class="btn-del bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-1 rounded-md" data-id="{{b.id}}">🗑️</button>
+              <a href="/dashboard/admin/inventory/{{b.id}}" class="inline-flex items-center justify-center w-[22px] h-[22px] rounded-full bg-white border-[1.5pt] border-[#8a42b9] text-[#8a42b9] text-[11px] font-bold hover:bg-[#8a42b9] hover:text-white transition" style="border-width:1.5pt;" title="Detail">→</a>
             </div>
           </td>
         </tr>
@@ -99,7 +93,7 @@
       </div>
     </div>
 
-    <!-- MODAL FINAL 10 POINT 1:1 -->
+    <!-- MODAL FINAL 10 POINT -->
     <div id="modal" class="hidden fixed inset-0 bg-[#8a42b9]/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-xl border border-purple-100">
         <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-purple-50 sticky top-0">
@@ -108,63 +102,47 @@
         </div>
         <form id="bahanForm" class="p-5 space-y-4">
           <input type="hidden" id="fid">
-          <!-- Row 1: Flag + ID Halal + Kode Auto -->
           <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label>Flag (FIX 1: double Orgk hilang)</label>
-              <select id="fflag" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger">
-                <option value="Orgk">Orgk (Organik)</option>
-                <option value="Hall">Hall (Halal)</option>
-                <option value="Non-Orgk">Non-Orgk</option>
-              </select>
-            </div>
+            <div><label>Flag</label><select id="fflag" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"><option value="Orgk">Orgk (Organik)</option><option value="Hall">Hall (Halal)</option><option value="Non-Orgk">Non-Orgk</option></select></div>
             <div><label>ID Halal (19 digit)</label><input id="fidhalal" placeholder="ID1234567890123456789" class="w-full p-2.5 rounded-lg text-[13px] font-mono enter-field" maxlength="19"></div>
             <div><label>Kode Auto</label><input id="fkode_auto" class="w-full p-2.5 rounded-lg text-[12px] font-mono bg-gray-50" readonly></div>
           </div>
-          <!-- Row 2: Kat Utama + Sub (FIX 2: sap vs Sap) -->
           <div class="grid grid-cols-2 gap-3">
-            <div><label>Kategori Utama (6 Asli - tetap untuk rumus)</label><select id="fkat_utama" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
-            <div><label>Sub Kategori (FIX 2: hanya lowercase sap)</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
+            <div><label>Kategori Utama (6 Asli)</label><select id="fkat_utama" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
+            <div><label>Sub Kategori (sap lowercase fix)</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
           </div>
-          <!-- Row 3 FIX 8: Nama Bahan - Satuan - Merek sejajar -->
           <div class="grid grid-cols-3 gap-3">
             <div><label>Nama Bahan *</label><input id="fnama" class="w-full p-2.5 rounded-lg text-[13px] font-semibold enter-field calc-trigger" placeholder="Udang Galah" required></div>
-            <div><label>Satuan (cek Supabase)</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px] enter-field"><option>Kg</option><option>Gram</option><option>Pcs</option><option>Liter</option><option>Pack</option><option>Botol</option><option>Dus</option><option>Ikat</option></select></div>
+            <div><label>Satuan</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px] enter-field"><option>Kg</option><option>Gram</option><option>Pcs</option><option>Liter</option><option>Pack</option><option>Botol</option><option>Dus</option><option>Ikat</option></select></div>
             <div><label>Merek</label><input id="fmerek" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Optional"></div>
           </div>
-          <!-- Row 4 FIX 5: Supplier - No HP - Alamat -->
           <div class="grid grid-cols-3 gap-3">
             <div><label>Nama Supplier</label><input id="fsupplier" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="CV Bahari"></div>
             <div><label>No. HP</label><input id="fhp" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="0812xxxx"></div>
             <div><label>Alamat</label><input id="falamat" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Jl Ikan No 5"></div>
           </div>
-          <!-- Row 5 FIX 9: Stock Awal - Tambah - Terpakai - Real -->
           <div class="grid grid-cols-4 gap-3">
             <div><label>Stock Awal</label><input id="fstock_awal" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Stock Tambah</label><input id="ftambah" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Stock Terpakai</label><input id="fterpakai" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Stock Real</label><input id="fstock" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-purple-50 font-bold border-purple-200" readonly></div>
           </div>
-          <!-- Row 6 FIX 10: Harga Awal - Baru - Final -->
           <div class="grid grid-cols-3 gap-3">
             <div><label>Harga Awal</label><input id="fharga_awal" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Harga Baru</label><input id="fharga_baru" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Harga Final</label><input id="fharga" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-orange-50 font-bold border-orange-200" readonly></div>
           </div>
-          <!-- FIX 6 & 7: Tombol Simpan & Batal ketebalan sama 1.5px -->
           <div class="flex gap-3 pt-3">
-            <button type="submit" class="flex-1 btn-ungu py-3 rounded-xl font-bold text-[14px] hover:opacity-90 transition">Simpan</button>
-            <button type="button" id="btnCloseModal" class="flex-1 btn-orange py-3 rounded-xl font-bold text-[14px] hover:bg-orange-100 transition">Batal</button>
+            <button type="submit" class="flex-1 btn-ungu py-3 rounded-xl font-bold text-[14px]">Simpan</button>
+            <button type="button" id="btnCloseModal" class="flex-1 btn-orange py-3 rounded-xl font-bold text-[14px]">Batal</button>
           </div>
-          <p class="text-[10px] text-gray-400 text-center mt-1">FIX 1-10: Flag single, Sub lowercase, No Urut hide, Supplier HP Alamat, Simpan=Batal 1.5px border</p>
         </form>
       </div>
     </div>
   </main>
 </div>
 <script>
-let STATE={kategoriUtama:[],kategoriSub:[],rows:[],kodeCache:{}};
-let DOM={};
+let STATE={kategoriUtama:[],kategoriSub:[],rows:[],kodeCache:{}}; let DOM={};
 function cacheDOM(){
   DOM.modal=document.getElementById('modal'); DOM.form=document.getElementById('bahanForm'); DOM.tbody=document.getElementById('tbodyBahan');
   DOM.search=document.getElementById('search'); DOM.fid=document.getElementById('fid'); DOM.fflag=document.getElementById('fflag');
@@ -185,7 +163,6 @@ async function loadKategori(){
     renderKategoriUtama();
   }catch(e){
     STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati',type:'utama'},{code:'dgi',label:'Bahan Hewani / Daging',type:'utama'},{code:'prs',label:'Perasa / Saus',type:'utama'},{code:'pck',label:'Packaging Kertas / Karton',type:'utama'},{code:'cuc',label:'Cuci / Chemical',type:'utama'},{code:'plk',label:'Plastik & Kemasan',type:'utama'}];
-    // FIX 2: hanya lowercase sap, bukan Sap
     STATE.kategoriSub=[
       {code:'syr',label:'Sayuran',parent:'nbt'}, {code:'umb',label:'Umbi-umbian',parent:'nbt'}, {code:'kcg',label:'Kacang & Bijian',parent:'nbt'}, {code:'rmp',label:'Rempah',parent:'nbt'}, {code:'srl',label:'Serealia / Beras',parent:'nbt'}, {code:'myk',label:'Minyak & Lemak',parent:'nbt'}, {code:'buh',label:'Buah',parent:'nbt'}, {code:'bdr',label:'Bumbu Dasar',parent:'nbt'},
       {code:'ugs',label:'Unggas Potong',parent:'dgi'}, {code:'sap',label:'Sapi',parent:'dgi'}, {code:'lut',label:'Laut / Seafood',parent:'dgi'}, {code:'oss',label:'Olahan Susu',parent:'dgi'}, {code:'tlr',label:'Telur / Unggas',parent:'dgi'},
@@ -207,12 +184,8 @@ function filterSubKategori(){
   const utamaCode=DOM.fkat_utama?.value;
   if(!utamaCode){ if(DOM.fkode_kat) DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
   const filtered=STATE.kategoriSub.filter(s=>s.parent===utamaCode);
-  // FIX 2: lowercase only, deduplicate case-insensitive
   const seen=new Set(); const uniq=[];
-  filtered.forEach(s=>{
-    const lc=s.code.toLowerCase();
-    if(!seen.has(lc)){ seen.add(lc); uniq.push({...s, code:lc}); }
-  });
+  filtered.forEach(s=>{ const lc=s.code.toLowerCase(); if(!seen.has(lc)){ seen.add(lc); uniq.push({...s, code:lc}); } });
   if(!DOM.fkode_kat) return;
   DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub Kategori --</option>'+uniq.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
   genKode();

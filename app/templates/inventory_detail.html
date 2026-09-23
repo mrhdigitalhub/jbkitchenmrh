@@ -5,179 +5,149 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>{{bahan.nama_bahan|title}} - Detail Bahan - Inventory Master Bahan</title>
+<title>{{bahan.nama_bahan|title}} - Detail - 6 Point Fix</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
   .divider{border-top:1px solid #d1d5db;}
-  .divider-thick{border-top:8px solid #f3f4f6;}
+  .title-black{color:#000000 !important;}
+  .identity-box{max-width:85%; margin:0 auto;}
 </style>
 </head>
-<body class="bg-[#faf5ff] min-h-screen">
-<!-- HEADER UNGU SAMA DENGAN INVENTORY -->
+<body class="bg-[#faf5ff]">
+<!-- HEADER -->
 <div class="bg-[#8a42b9] text-white">
-  <div class="max-w-5xl mx-auto px-5 py-4">
-    <div class="flex justify-between items-center text-[11px] opacity-80">
-      <a href="/dashboard/admin/inventory" class="flex items-center gap-2 hover:opacity-100 bg-white/15 px-3 py-1.5 rounded-full backdrop-blur">
-        <span>←</span> Kembali ke Inventory
-      </a>
-      <span class="tracking-widest uppercase text-[10px]">Inventory Master / Detail Bahan</span>
-    </div>
-    <div class="mt-3">
-      <h1 class="text-[18px] font-bold tracking-tight">Preview Detail 1 Card Sistematis</h1>
-      <p class="text-[11px] opacity-80 mt-1">Tampilan satu card sistematis untuk {{bahan.nama_bahan|title if bahan else 'Udang Galah'}} — semua informasi terkonsolidasi vertikal dengan divider #d1d5db 1px.</p>
+  <div class="max-w-4xl mx-auto px-4 py-3">
+    <div class="flex justify-between items-center text-[10px]">
+      <a href="/dashboard/admin/inventory" class="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full hover:bg-white/25 transition">← Kembali ke Inventory</a>
+      <span class="tracking-widest uppercase text-[9px] opacity-70">Inventory Master / Detail Bahan</span>
     </div>
   </div>
 </div>
 
-<div class="max-w-5xl mx-auto px-5 py-6">
-  <!-- SATU CARD SISTEMATIS - TANPA TOMBOL EDIT DI KANAN ATAS SESUAI REQUEST -->
+<div class="max-w-4xl mx-auto px-4 py-4 space-y-4">
+  <!-- CARD 1: DETAIL BAHAN - COMPACT RAPI FIX 6 POINT -->
   <div class="bg-white rounded-2xl border border-[#d1d5db] shadow-sm overflow-hidden">
-    <!-- HEADER CARD - TANPA TOMBOL EDIT -->
-    <div class="p-6">
-      <div class="flex justify-between items-start gap-4">
-        <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <h2 class="text-[26px] font-extrabold text-gray-900 tracking-tight">{{bahan.nama_bahan|title if bahan else 'Udang Galah'}}</h2>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border border-gray-300 bg-gray-50 text-gray-600">{{bahan.hall_flag or bahan.orgk_flag or bahan.flag or 'ORGANIK'}}</span>
-            {% set is_hall = (bahan.hall_flag or bahan.flag or '')|lower == 'hall' or 'hall' in (bahan.kode_bahan or '')|lower if bahan else False %}
-            {% if is_hall %}
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border border-emerald-200 bg-emerald-50 text-emerald-700">● ID Halal {{bahan.id_halal or '0015009876543210987'}}</span>
-            {% endif %}
-          </div>
-          <p class="text-[11px] text-gray-500 mt-2 flex items-center gap-1.5"><span class="bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded-full">✦</span> Bahan segar • Grade A • Stok terkontrol sistematis</p>
-        </div>
-        <div class="text-right shrink-0">
-          <div class="text-[9px] tracking-widest text-gray-400 uppercase">Kode Auto</div>
-          <div class="mt-1 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 font-mono text-[11px] font-medium text-gray-700">{{bahan.kode_bahan or 'orgk-dgi-lut-002'}}</div>
-          <!-- TOMBOL EDIT DIHAPUS SESUAI REQUEST - HANYA KODE AUTO -->
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- SECTION 1: IDENTITAS KATEGORI -->
-    <div class="p-5 grid grid-cols-2 gap-6">
+    <!-- HEADER - JUDUL HITAM #000, tanpa edit, p-3 compact -->
+    <div class="p-3 flex justify-between items-start">
       <div>
-        <div class="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-400 uppercase font-semibold"><span>🏷️</span> Identitas Kategori</div>
-        <div class="mt-3 flex justify-between items-center">
-          <span class="text-[11px] text-gray-500">Kategori Utama</span>
-          <span class="text-[12px] font-semibold text-gray-800 flex items-center gap-2">{{kategori_label or 'Bahan Hewani / Daging'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kategori_utama or 'dgi'}}</span></span>
+        <div class="flex items-center gap-2">
+          <h2 class="text-[16px] font-bold title-black tracking-tight">{{bahan.nama_bahan|title if bahan else 'Udang Galah'}}</h2>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-gray-50 border-gray-300 text-gray-600 title-black">{{bahan.flag or 'Orgk'}}</span>
         </div>
+        <p class="text-[10px] text-gray-500 mt-1">✦ Bahan segar • Grade A • Stok terkontrol sistematis</p>
       </div>
-      <div>
-        <div class="h-[16px]"></div>
-        <div class="mt-3 flex justify-between items-center">
-          <span class="text-[11px] text-gray-500">Sub Kategori</span>
-          <span class="text-[12px] font-semibold text-gray-800 flex items-center gap-2">{{sub_label or 'Laut / Seafood'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kode_kategori or 'lut'}}</span></span>
-        </div>
+      <div class="text-right">
+        <div class="text-[8px] tracking-widest text-gray-400 uppercase">Kode Auto</div>
+        <div class="mt-1 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 font-mono text-[10px] text-gray-700">{{bahan.kode_bahan or 'orgk-dgi-lut-002'}}</div>
       </div>
     </div>
-
     <div class="divider"></div>
 
-    <!-- SECTION 2: DETAIL PRODUK -->
-    <div class="p-5 grid grid-cols-3 gap-6">
-      <div class="col-span-3 flex items-center gap-1.5 text-[10px] tracking-widest text-gray-400 uppercase font-semibold"><span>📦</span> Detail Produk</div>
-      <div class="flex justify-between items-center">
-        <span class="text-[11px] text-gray-500">Satuan</span>
-        <span class="bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-1 rounded-full text-[11px] font-medium">{{bahan.satuan_default or bahan.satuan or 'kg'}}</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-[11px] text-gray-500">Merek</span>
-        <span class="text-[12px] font-semibold text-gray-800">{{bahan.merek or 'Laut Segar'}}</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-[11px] text-gray-500">Satuan Detail</span>
-        <span class="text-[11px] font-medium text-gray-700">1 kg = ±20 ekor • 200-250gr/ekor</span>
+    <!-- IDENTITAS KATEGORI - WIDTH DIKURANGI 85%, FONT +2PX -->
+    <div class="p-3 identity-box">
+      <div class="text-[11px] tracking-widest uppercase text-gray-400 font-semibold mb-2">🏷️ Identitas Kategori</div>
+      <div class="grid grid-cols-2 gap-4 text-[12px]">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-500 text-[11px]">Kategori Utama</span>
+          <span class="font-semibold title-black flex items-center gap-1.5">{{kategori_label or 'Bahan Hewani / Daging'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kategori_utama or 'dgi'}}</span></span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-500 text-[11px]">Sub Kategori</span>
+          <span class="font-semibold title-black flex items-center gap-1.5">{{sub_label or 'Laut / Seafood'}} <span class="bg-gray-900 text-white px-1.5 py-0.5 rounded text-[10px] font-mono">{{bahan.kode_kategori or 'lut'}}</span></span>
+        </div>
       </div>
     </div>
-
     <div class="divider"></div>
 
-    <!-- SECTION 3: SUPPLIER & KONTAK - HIGHLIGHT -->
-    <div class="m-3 p-4 rounded-xl bg-[#faf5ff] border border-purple-100">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-1.5 text-[10px] tracking-widest text-[#8a42b9] uppercase font-bold"><span>🚚</span> Supplier & Kontak</div>
-        <span class="px-2 py-0.5 rounded-full bg-white border border-purple-200 text-[9px] text-purple-600">Terverifikasi</span>
-      </div>
-      <div class="mt-4 grid grid-cols-3 gap-4">
-        <div>
-          <div class="text-[9px] uppercase tracking-wide text-gray-400">Nama Supplier</div>
-          <div class="mt-1 text-[13px] font-bold text-gray-900">{{bahan.supplier or bahan.nama_supplier or 'CV Bahari Jaya'}}</div>
-        </div>
-        <div>
-          <div class="text-[9px] uppercase tracking-wide text-gray-400 flex items-center gap-1"><span>📞</span> No HP</div>
-          <div class="mt-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[11px] font-mono">{{bahan.no_hp or bahan.hp or '0812-3456-7890'}}</div>
-        </div>
-        <div>
-          <div class="text-[9px] uppercase tracking-wide text-gray-400 flex items-center gap-1"><span>📍</span> Alamat</div>
-          <div class="mt-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[11px]">{{bahan.alamat or 'Jl. Pelabuhan No.12, Sidoarjo'}}</div>
-        </div>
+    <!-- DETAIL PRODUK -->
+    <div class="p-3">
+      <div class="text-[11px] tracking-widest uppercase text-gray-400 font-semibold mb-2">📦 Detail Produk</div>
+      <div class="grid grid-cols-3 gap-3 text-[12px]">
+        <div class="flex justify-between"><span class="text-gray-500 text-[11px]">Satuan</span><span class="bg-purple-50 text-purple-700 border border-purple-100 px-2 py-0.5 rounded-full text-[11px] title-black">{{bahan.satuan_default or 'Kg'}}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 text-[11px]">Merek</span><span class="font-semibold title-black">{{bahan.merek or 'Laut Segar'}}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 text-[11px]">Satuan Detail</span><span class="text-[11px] title-black">1 kg = ±20 ekor</span></div>
       </div>
     </div>
+    <div class="divider"></div>
 
-    <div class="divider-thick"></div>
+    <!-- SUPPLIER & KONTAK - BG #faf5ff -->
+    <div class="m-2 p-3 rounded-xl bg-[#faf5ff] border border-purple-100">
+      <div class="flex justify-between items-center mb-2">
+        <div class="text-[11px] tracking-widest uppercase text-[#8a42b9] font-bold">🚚 Supplier & Kontak</div>
+        <span class="px-1.5 py-0.5 rounded-full bg-white border border-purple-200 text-[8px] text-purple-600">Terverifikasi</span>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <div><div class="text-[9px] uppercase text-gray-400">Nama Supplier</div><div class="mt-1 text-[12px] font-bold title-black">{{bahan.supplier or bahan.nama_supplier or 'Import Kanan'}}</div></div>
+        <div><div class="text-[9px] uppercase text-gray-400">📞 No HP</div><div class="mt-1 px-2 py-1 rounded-lg bg-white border border-[#e5e7eb] text-[11px] font-mono title-black">{{bahan.no_hp or '0812-3456-7890'}}</div></div>
+        <div><div class="text-[9px] uppercase text-gray-400">📍 Alamat</div><div class="mt-1 px-2 py-1 rounded-lg bg-white border border-[#e5e7eb] text-[11px] title-black">{{bahan.alamat or 'Jl. Pelabuhan No.12, Sidoarjo'}}</div></div>
+      </div>
+    </div>
+    <div class="divider"></div>
 
-    <!-- SECTION 4 & 5: STOCK & HARGA SIDE BY SIDE -->
+    <!-- STOCK & HARGA - SESUAI NAMA KOLOM INPUT MASTER -->
     <div class="grid grid-cols-2 divide-x divide-[#d1d5db]">
-      <div class="p-5">
-        <div class="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-500 uppercase font-bold mb-4"><span class="bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">🧊</span> Stock</div>
-        <div class="grid grid-cols-3 gap-2">
-          <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-            <div class="text-[9px] uppercase text-gray-500">Awal</div>
-            <div class="mt-1 text-[14px] font-bold text-gray-800">{{bahan.stock_qty or 50}}</div>
-          </div>
-          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-            <div class="text-[9px] uppercase text-emerald-600 font-bold">Tambah</div>
-            <div class="mt-1 text-[14px] font-bold text-emerald-700">+20</div>
-          </div>
-          <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-            <div class="text-[9px] uppercase text-red-600 font-bold">Pakai</div>
-            <div class="mt-1 text-[14px] font-bold text-red-700">-15</div>
-          </div>
+      <div class="p-3">
+        <div class="text-[11px] tracking-widest uppercase text-gray-500 font-bold mb-2">🧊 Stock - sesuai input master</div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-gray-500">Stock Awal</div><div class="text-[13px] font-bold title-black">{{bahan.stock_awal or bahan.stock_qty or 120}}</div></div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-emerald-600 font-bold">Stock Tambah</div><div class="text-[13px] font-bold text-emerald-700">+{{bahan.stock_tambah or 45}}</div></div>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center"><div class="text-[9px] uppercase text-red-600 font-bold">Stock Terpakai</div><div class="text-[13px] font-bold text-red-700">-{{bahan.stock_terpakai or 30}}</div></div>
         </div>
-        <div class="mt-3 bg-[#8a42b9] rounded-xl p-3 flex justify-between items-center text-white">
-          <div><div class="text-[10px] opacity-80 uppercase">Stock Real</div><div class="text-[10px] opacity-60">Highlight ungu</div></div>
-          <div class="text-[22px] font-extrabold">{{bahan.stock_real or bahan.stock_qty or 55}}</div>
-        </div>
+        <div class="mt-2 bg-[#8a42b9] rounded-lg p-2.5 flex justify-between items-center text-white"><span class="text-[11px] uppercase font-bold">Stock Real</span><span class="text-[16px] font-extrabold">{{bahan.stock_real or 135}} {{bahan.satuan_default or 'Kg'}}</span></div>
       </div>
-      <div class="p-5">
-        <div class="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-500 uppercase font-bold mb-4"><span class="bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded">$</span> Harga</div>
-        <div class="space-y-2">
-          <div class="flex justify-between items-center border border-gray-200 rounded-lg px-3 py-2.5">
-            <span class="text-[11px] text-gray-500">Harga Awal</span><span class="text-[11px] font-mono font-medium">Rp {{'{:,.0f}'.format(bahan.harga_per_satuan or 85000)}}</span>
-          </div>
-          <div class="flex justify-between items-center border border-gray-200 rounded-lg px-3 py-2.5">
-            <span class="text-[11px] text-gray-500">Harga Baru</span><span class="text-[11px] font-mono font-medium">Rp 90.000</span>
-          </div>
+      <div class="p-3">
+        <div class="text-[11px] tracking-widest uppercase text-gray-500 font-bold mb-2">💰 Harga - sesuai input master</div>
+        <div class="space-y-1.5">
+          <div class="flex justify-between border border-gray-200 rounded-lg px-2.5 py-2 text-[11px]"><span class="text-gray-500">Harga Awal</span><span class="font-mono font-medium title-black">Rp {{'{:,.0f}'.format(bahan.harga_awal or bahan.harga_per_satuan or 85000)}}</span></div>
+          <div class="flex justify-between border border-gray-200 rounded-lg px-2.5 py-2 text-[11px]"><span class="text-gray-500">Harga Baru</span><span class="font-mono font-medium title-black">Rp {{'{:,.0f}'.format(bahan.harga_baru or 120000)}}</span></div>
         </div>
-        <div class="mt-3 bg-orange-500 rounded-xl p-3 flex justify-between items-center text-white">
-          <div class="text-[11px] font-bold uppercase">Harga Final — Highlight Orange</div>
-          <div class="text-[14px] font-extrabold">Rp {{'{:,.0f}'.format(bahan.harga_per_satuan or 88000)}}</div>
-        </div>
+        <div class="mt-2 bg-orange-500 rounded-lg p-2.5 flex justify-between items-center text-white"><span class="text-[11px] uppercase font-bold">Harga Final</span><span class="text-[14px] font-extrabold">Rp {{'{:,.0f}'.format(bahan.harga_final or bahan.harga_per_satuan or 120000)}}</span></div>
       </div>
     </div>
-
     <div class="divider"></div>
+    <div class="p-3 bg-[#f9fafb] flex justify-between text-[10px] text-gray-500"><span>📅 Lokasi: Rak A-12 / Cold-02</span><span>EXP: 24 Des 2025 • 2 hari</span><span>Catatan: Butuh thawing 30 menit</span></div>
+  </div>
 
-    <!-- SECTION 6: INFO TAMBAHAN -->
-    <div class="p-5 bg-gray-50/70">
-      <div class="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-500 uppercase font-bold mb-3"><span>ⓘ</span> Info Tambahan</div>
-      <div class="grid grid-cols-3 gap-4 text-[11px]">
-        <div class="flex justify-between"><span class="text-gray-500">📅 Tanggal Input</span><span class="font-medium">{{bahan.created_at or '12 Okt 2025'}}</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">👤 User</span><span class="px-2 py-0.5 bg-white border rounded text-[10px] font-mono">admin_gudang</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Status</span><span class="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[10px]">Aktif</span></div>
+  <!-- CARD 2: PROSES PEMBUATAN PRODUK - A-E -->
+  <div class="bg-white rounded-2xl border border-[#d1d5db] shadow-sm overflow-hidden">
+    <div class="p-3 border-b border-[#d1d5db] bg-[#faf5ff]">
+      <h3 class="text-[13px] font-bold title-black">📋 Proses Pembuatan Produk</h3>
+      <p class="text-[10px] text-gray-500 mt-1">Tahapan lengkap dari persiapan bahan sampai delivery - bisa input uraian lengkap</p>
+    </div>
+    <div class="p-3 space-y-3">
+      <!-- A -->
+      <div class="border border-gray-200 rounded-xl p-3">
+        <div class="flex justify-between items-center mb-2"><span class="text-[11px] font-bold title-black bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">A. Proses Persiapan Bahan</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
+        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] bg-white min-h-[70px] title-black" placeholder="Contoh: Cuci bersih Udang Galah, buang kepala dan kotoran, timbang 1kg = ±20 ekor (200-250gr/ekor), rendam air es 10 menit, tiriskan...">{{bahan.proses_a or 'Cuci bersih Udang Galah, buang kepala dan kotoran, timbang 1kg = ±20 ekor, rendam air es 10 menit, tiriskan.'}}</textarea>
       </div>
-      <div class="mt-4 p-3 rounded-lg bg-purple-50 border border-purple-100 text-[11px] text-purple-800">
-        <b>Sinkronisasi aktif:</b> Semua kolom di card ini langsung terbaca dari master input bahan. Edit hanya di Inventory Master Bahan, detail ini view only.
+      <!-- B -->
+      <div class="border border-gray-200 rounded-xl p-3">
+        <div class="flex justify-between items-center mb-2"><span class="text-[11px] font-bold title-black bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">B. Proses Memasak</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
+        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] bg-white min-h-[70px] title-black" placeholder="Contoh: Panaskan minyak 170°C, goreng 3 menit sampai golden, atau rebus air + garam + jeruk nipis...">{{bahan.proses_b or 'Panaskan minyak 170°C, goreng Udang Galah 3 menit sampai golden brown, angkat tiriskan minyak.'}}</textarea>
       </div>
+      <!-- C -->
+      <div class="border border-gray-200 rounded-xl p-3">
+        <div class="flex justify-between items-center mb-2"><span class="text-[11px] font-bold title-black bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">C. Proses Penyajian</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
+        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] bg-white min-h-[70px] title-black" placeholder="Contoh: Plating di piring saji, garnish daun ketumbar, siram saus padang, sajikan hangat...">{{bahan.proses_c or 'Plating di piring saji oval, garnish daun ketumbar dan irisan jeruk nipis, siram saus pilihan, sajikan hangat.'}}</textarea>
+      </div>
+      <!-- D -->
+      <div class="border border-gray-200 rounded-xl p-3">
+        <div class="flex justify-between items-center mb-2"><span class="text-[11px] font-bold title-black bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">D. Proses Pencucian Perlengkapan</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
+        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] bg-white min-h-[70px] title-black" placeholder="Contoh: Cuci wajan, sutil, pisau, talenan dengan sabun cuci hall-cuc-cir-001, bilas air mengalir, keringkan...">{{bahan.proses_d or 'Cuci semua perlengkapan (wajan, sutil, pisau, talenan) dengan sabun cuci, bilas air mengalir, keringkan lap bersih.'}}</textarea>
+      </div>
+      <!-- E -->
+      <div class="border border-gray-200 rounded-xl p-3">
+        <div class="flex justify-between items-center mb-2"><span class="text-[11px] font-bold title-black bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full">E. Proses Delivery</span><span class="text-[9px] text-gray-400">Input uraian lengkap</span></div>
+        <textarea class="w-full p-2.5 rounded-lg text-[11px] border border-[#e5e7eb] bg-white min-h-[70px] title-black" placeholder="Contoh: Packing box, label nama menu, masukkan ke tas delivery, suhu jaga 60°C, estimasi 30 menit sampai...">{{bahan.proses_e or 'Packing box tahan panas, label nama menu dan jam masak, masukkan tas delivery thermal, jaga suhu 60°C, estimasi 30 menit sampai customer.'}}</textarea>
+      </div>
+    </div>
+    <div class="p-3 bg-[#f9fafb] border-t border-[#d1d5db] flex gap-2">
+      <button class="flex-1 bg-[#8a42b9] text-white py-2.5 rounded-xl font-bold text-[11px] border-[1.5px] border-[#8a42b9]">Simpan Proses</button>
+      <a href="/dashboard/admin/inventory" class="flex-1 text-center bg-[#fff7ed] text-[#c2410c] py-2.5 rounded-xl font-bold text-[11px] border-[1.5px] border-[#fdba74]">Batal</a>
     </div>
   </div>
 
-  <div class="mt-4 text-center">
-    <a href="/dashboard/admin/inventory" class="inline-block px-6 py-2.5 rounded-xl border-[1.5px] border-[#fdba74] bg-[#fff7ed] text-[#c2410c] text-[13px] font-bold">← Kembali ke Inventory Master Bahan</a>
-  </div>
+  <div class="text-center"><a href="/dashboard/admin/inventory" class="inline-block px-5 py-2 rounded-xl border-[1.5px] border-[#fdba74] bg-[#fff7ed] text-[#c2410c] text-[11px] font-bold">← Kembali ke Inventory Master Bahan</a></div>
 </div>
 </body>
 </html>
