@@ -30,28 +30,41 @@ try:
 except Exception as e:
     print(f"[WARN] Supabase init fail: {e}")
 
-app = FastAPI(title="JB KITCHEN MRH - Clean 950Ln v10.2")
+app = FastAPI(title="JB KITCHEN MRH - Clean 950Ln v10.2 - SYNC FIX 3.14")
 BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent if BASE_DIR.name == "app" else BASE_DIR
 
-# FIX: Guard templates agar tidak crash di Vercel jika folder tidak ada
+# FIX SYNC FINAL - Cari templates di semua lokasi (lokal & Vercel)
 templates = None
-templates_dir = BASE_DIR / "templates"
-if templates_dir.exists():
-    templates = Jinja2Templates(directory=str(templates_dir))
-else:
-    # Cek juga di parent (jika struktur api/index.py)
-    alt_templates = BASE_DIR.parent / "templates"
-    if alt_templates.exists():
-        templates = Jinja2Templates(directory=str(alt_templates))
-    else:
-        print(f"[WARN] Folder templates tidak ditemukan di {templates_dir}")
+templates_candidates = [
+    BASE_DIR / "templates",                  # app/templates jika file di app/main.py
+    BASE_DIR / "app" / "templates",          # app/app/templates (jaga2)
+    PROJECT_ROOT / "app" / "templates",      # root/app/templates (struktur Bapak)
+    PROJECT_ROOT / "templates",              # root/templates
+    Path.cwd() / "app" / "templates",
+    Path.cwd() / "templates",
+]
+for cand in templates_candidates:
+    if cand.exists():
+        templates = Jinja2Templates(directory=str(cand))
+        print(f"[OK] Templates loaded: {cand}")
+        break
+if templates is None:
+    print(f"[FATAL] Templates tidak ketemu. Cek: {templates_candidates}")
 
-if (BASE_DIR / "static").exists():
-    app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-else:
-    alt_static = BASE_DIR.parent / "static"
-    if alt_static.exists():
-        app.mount("/static", StaticFiles(directory=str(alt_static)), name="static")
+# FIX SYNC FINAL - Static
+for static_cand in [
+    BASE_DIR / "static",
+    BASE_DIR / "app" / "static",
+    PROJECT_ROOT / "app" / "static",
+    PROJECT_ROOT / "static",
+    Path.cwd() / "app" / "static",
+    Path.cwd() / "static",
+]:
+    if static_cand.exists():
+        app.mount("/static", StaticFiles(directory=str(static_cand)), name="static")
+        print(f"[OK] Static mounted: {static_cand}")
+        break
 
 # ================== KONSTANTA - TETAP SESUAI SPEC EXISTING ==================
 DEFAULT_KAT_UTAMA = [
