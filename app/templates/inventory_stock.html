@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Inventory Master Bahan - 49 Bahan - JB KITCHEN - FIX 6 POINT</title>
+<title>Inventory Master Bahan - 49 Bahan - FINAL 10 POINT 1:1</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
   label{font-weight:600 !important;color:#4B5563 !important;font-size:12px !important;}
   input,select{font-weight:500 !important;border:1px solid #E5E7EB !important;color:#374151 !important;background:#fff !important;}
   input:focus,select:focus{border-color:#8a42b9 !important;outline:none;box-shadow:0 0 0 3px rgba(138,66,185,0.12) !important;}
   .enter-field{transition:all 0.15s;}
-  /* FIX Final: Row 30px + garis abu #d1d5db 1px RECOMMENDED */
   .row-30{height:30px !important; min-height:30px !important; max-height:30px !important;}
-  .row-border-black{border-bottom:1px solid #d1d5db !important;}
+  .row-border{border-bottom:1px solid #d1d5db !important;}
+  /* Tombol ketebalan sama 1.5px border */
+  .btn-ungu{border:1.5px solid #8a42b9 !important; background:#8a42b9 !important; color:#fff !important;}
+  .btn-orange{border:1.5px solid #fdba74 !important; background:#fff7ed !important; color:#c2410c !important;}
 </style>
 </head>
 <body class="bg-[#faf5ff]">
@@ -24,18 +26,15 @@
     <p class="text-[11px] text-gray-500 mt-1 mb-5 font-medium">49 bahan - 6 Kategori Asli</p>
     <ul class="space-y-1 text-[13px]">
       <a href="/dashboard/admin"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>📊</span> Dashboard</li></a>
-      <!-- FIX Point 1: Ganti tulisan -->
       <a href="/dashboard/admin/inventory"><li class="bg-orange-50 p-2.5 rounded font-semibold text-orange-700 border border-orange-100 flex gap-2"><span>📦</span> Inventory Master Bahan</li></a>
       <a href="/dashboard/admin/menu"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>🍱</span> Master Menu</li></a>
     </ul>
     <div class="mt-5 p-3 bg-green-50 rounded-lg text-[11px] border border-green-100 text-green-800 leading-relaxed">
-      <div class="font-semibold mb-1">✅ Status Fix 6 Point:</div>
-      <div>✓ 1. Sidebar → Master Bahan</div>
-      <div>✓ 2. Baris 30px</div>
-      <div>✓ 3. Garis hitam outline</div>
-      <div>✓ 4. Kat Utama/Sub hide UI</div>
-      <div>✓ 5. ID Halal 19 digit</div>
-      <div>✓ 6. Kolom Satuan auto</div>
+      <div class="font-semibold mb-1">✅ Final 10 Point 1:1:</div>
+      <div>✓ Flag fix, Sapi (sap) fix</div>
+      <div>✓ No Urut hide, garis #d1d5db</div>
+      <div>✓ Supplier - HP - Alamat</div>
+      <div>✓ Simpan=Batal ketebalan sama</div>
     </div>
     <a href="/" class="block mt-5 text-gray-400 text-[12px] hover:text-gray-600">Logout</a>
   </nav>
@@ -43,7 +42,7 @@
     <div class="flex justify-between items-start mb-4 gap-4">
       <div>
         <h1 class="text-[18px] font-bold text-gray-800 tracking-tight">Inventory Master Bahan - {{total}} Bahan</h1>
-        <p class="text-[11px] text-gray-500 mt-1">Flow: Flag → Kat Utama (hide) → Sub (hide) → Kode → Nama | Rumus 1:1 tetap, UI saja yang dibersihkan</p>
+        <p class="text-[11px] text-gray-500 mt-1">Flow: Flag → Kat Utama (hide) → Sub (hide) → Kode → Nama | Rumus 1:1 tetap</p>
       </div>
       <div class="flex gap-2 shrink-0">
         <input id="search" placeholder="Cari kode / nama / ID Halal..." class="border border-gray-200 p-2.5 rounded-lg text-[13px] w-64 bg-white shadow-sm focus:border-purple-300">
@@ -56,12 +55,10 @@
       <table class="w-full text-[13px]" id="bahanTable">
         <thead class="sticky top-0 z-10">
           <tr class="bg-[#8a42b9] text-white text-[11px] font-bold tracking-wide">
-            <!-- FIX Point 5: ID Halal disamping Flag -->
             <th class="p-3 text-left w-[70px]">Flag</th>
             <th class="p-3 text-left w-[180px]">ID Halal (19 digit)</th>
             <th class="p-3 text-left w-[140px]">Kode</th>
             <th class="p-3 text-left">Nama</th>
-            <!-- FIX Point 6: Satuan disamping Nama -->
             <th class="p-3 text-left w-[80px]">Satuan</th>
             <th class="p-3 text-left w-[80px]">Stock</th>
             <th class="p-3 text-left w-[100px]">Harga</th>
@@ -70,36 +67,23 @@
         </thead>
         <tbody id="tbodyBahan">
         {% for b in bahan %}
-        <!-- FIX Final: height 30px + garis abu #d1d5db 1px -->
-        <tr class="row-30 row-border-black hover:bg-purple-50/60 transition-colors row-bahan bg-white" data-id="{{b.id}}" data-name="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }} {{ (b.id_halal or '')|lower }}" data-kat="{{b.kategori_utama or ''}}" data-sub="{{b.kode_kategori or ''}}" data-kode="{{(b.kode_bahan or '')|lower}}" style="height:30px;">
+        <tr class="row-30 row-border hover:bg-purple-50/60 transition-colors row-bahan bg-white" data-id="{{b.id}}" data-name="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }} {{ (b.id_halal or '')|lower }}" data-kat="{{b.kategori_utama or ''}}" data-sub="{{b.kode_kategori or ''}}" data-kode="{{(b.kode_bahan or '')|lower}}" style="height:30px;">
           <td class="p-1 px-2.5"><span class="{% if (b.hall_flag or b.flag or '')|lower == 'hall' or 'hall' in (b.kode_bahan or '')|lower %}bg-green-50 text-green-700 border-green-100{% else %}bg-gray-50 text-gray-600 border-gray-200{% endif %} px-2 py-0.5 rounded-full text-[10px] font-medium border">{{b.hall_flag or b.orgk_flag or b.flag or 'Orgk'}}</span></td>
-          <!-- FIX Point 5: ID Halal 19 digit - hanya Hall yang tampil, Orgk kosong -->
           <td class="p-1 px-2.5 font-mono text-[11px] text-gray-700">
             {% set is_hall = (b.hall_flag or b.flag or '')|lower == 'hall' or 'hall' in (b.kode_bahan or '')|lower %}
             {% if is_hall %}
-              {% if b.id_halal or b.halal_id or b.nomor_halal %}
-                {{b.id_halal or b.halal_id or b.nomor_halal}}
-              {% else %}
-                ID12345257836995533
-              {% endif %}
-            {% else %}
-              <span class="text-gray-300">-</span>
-            {% endif %}
+              {% if b.id_halal or b.halal_id or b.nomor_halal %}{{b.id_halal or b.halal_id or b.nomor_halal}}{% else %}ID12345257836995533{% endif %}
+            {% else %}<span class="text-gray-300">-</span>{% endif %}
           </td>
           <td class="p-1 px-2.5 font-mono text-[11px] font-medium text-gray-600">{{b.kode_bahan}}</td>
           <td class="p-1 px-2.5 font-semibold text-gray-800 capitalize text-[12px]">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
-          <!-- FIX Point 6: Satuan otomatis -->
           <td class="p-1 px-2.5 text-[11px]"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100 font-medium">{{b.satuan_default or b.satuan or 'Kg'}}</span></td>
           <td class="p-1 px-2.5 font-semibold text-gray-700 text-[12px] {% if (b.stock_qty or 0)==0 %}text-red-600{% endif %}">{{b.stock_qty}}</td>
           <td class="p-1 px-2.5 font-mono text-[11px] text-gray-700">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td>
           <td class="p-1 px-2.5">
             <div class="flex gap-1">
-              <button class="btn-edit bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-100 p-1 rounded-md transition-colors" data-bahan='{{ b|tojson }}' title="Edit {{b.nama_bahan}}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-              </button>
-              <button class="btn-del bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-1 rounded-md transition-colors" data-id="{{b.id}}" title="Hapus {{b.nama_bahan}}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-              </button>
+              <button class="btn-edit bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-100 p-1 rounded-md transition-colors" data-bahan='{{ b|tojson }}' title="Edit {{b.nama_bahan}}">✏️</button>
+              <button class="btn-del bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-1 rounded-md transition-colors" data-id="{{b.id}}" title="Hapus {{b.nama_bahan}}">🗑️</button>
             </div>
           </td>
         </tr>
@@ -109,54 +93,64 @@
       </div>
     </div>
 
-    <!-- HIDDEN DATA - Kat Utama & Sub tetap disimpan untuk rumus 1:1 -->
-    <div class="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-[10px] text-gray-600">
-      <b>Note 1:1 Final:</b> Kolom <code>Kat Utama</code> & <code>Sub</code> di-HIDE dari UI (sesuai point 4) tapi <b>tetap ada di data-attribute & backend</b> untuk rumus kode <code>Flag-Kat-Sub-Urut</code>. Tidak merusak rumus.
-      Jika butuh tampil lagi, tinggal uncomment TH di thead.
-    </div>
-
-    <!-- MODAL INPUT BAHAN BARU - Tetap pakai Kat Utama & Sub untuk gen kode -->
+    <!-- MODAL FINAL 10 POINT 1:1 -->
     <div id="modal" class="hidden fixed inset-0 bg-[#8a42b9]/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-xl border border-purple-100">
-        <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-purple-50">
+      <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-xl border border-purple-100">
+        <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-purple-50 sticky top-0">
           <h3 class="font-bold text-[16px] text-gray-800">Master Bahan - Inventory Master Bahan + ID Halal 19 digit</h3>
-          <p class="text-[11px] text-gray-500 mt-1">Flow: Flag → Kat Utama → Sub → Kode → Nama | ENTER pindah field</p>
+          <p class="text-[11px] text-gray-500 mt-1">Flow: Flag → Kat Utama → Sub → Kode → Nama | ENTER pindah field | 1:1 final</p>
         </div>
         <form id="bahanForm" class="p-5 space-y-4">
           <input type="hidden" id="fid">
+          <!-- Row 1: Flag + ID Halal + Kode Auto -->
           <div class="grid grid-cols-3 gap-3">
-            <div><label>Flag Halal</label><select id="fhall" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"><option value="">Orgk</option><option value="Halal">Halal</option></select></div>
-            <div><label>Flag Orgk</label><select id="forgk" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"><option>Orgk</option><option>Non-Orgk</option></select></div>
+            <div>
+              <label>Flag (FIX 1: double Orgk hilang)</label>
+              <select id="fflag" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger">
+                <option value="Orgk">Orgk (Organik)</option>
+                <option value="Hall">Hall (Halal)</option>
+                <option value="Non-Orgk">Non-Orgk</option>
+              </select>
+            </div>
             <div><label>ID Halal (19 digit)</label><input id="fidhalal" placeholder="ID1234567890123456789" class="w-full p-2.5 rounded-lg text-[13px] font-mono enter-field" maxlength="19"></div>
+            <div><label>Kode Auto</label><input id="fkode_auto" class="w-full p-2.5 rounded-lg text-[12px] font-mono bg-gray-50" readonly></div>
           </div>
+          <!-- Row 2: Kat Utama + Sub (FIX 2: sap vs Sap) -->
           <div class="grid grid-cols-2 gap-3">
             <div><label>Kategori Utama (6 Asli - tetap untuk rumus)</label><select id="fkat_utama" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
-            <div><label>Sub Kategori (tetap untuk rumus)</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
+            <div><label>Sub Kategori (FIX 2: hanya lowercase sap)</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger"></select></div>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label>Kode Auto</label><input id="fkode_auto" class="w-full p-2.5 rounded-lg text-[12px] font-mono bg-gray-50" readonly></div>
-            <div><label>No Urut</label><input id="fno_urut" class="w-full p-2.5 rounded-lg text-[13px] bg-gray-50" readonly></div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
+          <!-- Row 3 FIX 8: Nama Bahan - Satuan - Merek sejajar -->
+          <div class="grid grid-cols-3 gap-3">
             <div><label>Nama Bahan *</label><input id="fnama" class="w-full p-2.5 rounded-lg text-[13px] font-semibold enter-field calc-trigger" placeholder="Udang Galah" required></div>
+            <div><label>Satuan (cek Supabase)</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px] enter-field"><option>Kg</option><option>Gram</option><option>Pcs</option><option>Liter</option><option>Pack</option><option>Botol</option><option>Dus</option><option>Ikat</option></select></div>
             <div><label>Merek</label><input id="fmerek" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Optional"></div>
           </div>
-          <div class="grid grid-cols-4 gap-3">
-            <div><label>Satuan</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px] enter-field"><option>Kg</option><option>Gram</option><option>Liter</option><option>Pcs</option><option>Pack</option><option>Botol</option></select></div>
-            <div><label>Stock Awal</label><input id="fstock_awal" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
-            <div><label>Tambah</label><input id="ftambah" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
-            <div><label>Terpakai</label><input id="fterpakai" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
-          </div>
+          <!-- Row 4 FIX 5: Supplier - No HP - Alamat -->
           <div class="grid grid-cols-3 gap-3">
-            <div><label>Stock Final</label><input id="fstock" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-purple-50 font-bold" readonly></div>
+            <div><label>Nama Supplier</label><input id="fsupplier" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="CV Bahari"></div>
+            <div><label>No. HP</label><input id="fhp" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="0812xxxx"></div>
+            <div><label>Alamat</label><input id="falamat" class="w-full p-2.5 rounded-lg text-[13px] enter-field" placeholder="Jl Ikan No 5"></div>
+          </div>
+          <!-- Row 5 FIX 9: Stock Awal - Tambah - Terpakai - Real -->
+          <div class="grid grid-cols-4 gap-3">
+            <div><label>Stock Awal</label><input id="fstock_awal" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
+            <div><label>Stock Tambah</label><input id="ftambah" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
+            <div><label>Stock Terpakai</label><input id="fterpakai" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
+            <div><label>Stock Real</label><input id="fstock" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-purple-50 font-bold border-purple-200" readonly></div>
+          </div>
+          <!-- Row 6 FIX 10: Harga Awal - Baru - Final -->
+          <div class="grid grid-cols-3 gap-3">
             <div><label>Harga Awal</label><input id="fharga_awal" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
             <div><label>Harga Baru</label><input id="fharga_baru" type="number" class="w-full p-2.5 rounded-lg text-[13px] enter-field calc-trigger" value="0"></div>
+            <div><label>Harga Final</label><input id="fharga" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-orange-50 font-bold border-orange-200" readonly></div>
           </div>
-          <div><label>Harga Final</label><input id="fharga" type="number" class="w-full p-2.5 rounded-lg text-[13px] bg-orange-50 font-bold" readonly></div>
-          <div class="flex gap-2 pt-2">
-            <button type="submit" class="flex-1 bg-[#8a42b9] text-white py-3 rounded-lg font-semibold text-[14px] hover:bg-[#7a3aa8]">💾 SIMPAN - 30px + Garis Hitam + ID Halal</button>
-            <button type="button" id="btnCloseModal" class="px-6 py-3 border border-gray-200 rounded-lg text-gray-600 text-[13px]">Batal</button>
+          <!-- FIX 6 & 7: Tombol Simpan & Batal ketebalan sama 1.5px -->
+          <div class="flex gap-3 pt-3">
+            <button type="submit" class="flex-1 btn-ungu py-3 rounded-xl font-bold text-[14px] hover:opacity-90 transition">Simpan</button>
+            <button type="button" id="btnCloseModal" class="flex-1 btn-orange py-3 rounded-xl font-bold text-[14px] hover:bg-orange-100 transition">Batal</button>
           </div>
+          <p class="text-[10px] text-gray-400 text-center mt-1">FIX 1-10: Flag single, Sub lowercase, No Urut hide, Supplier HP Alamat, Simpan=Batal 1.5px border</p>
         </form>
       </div>
     </div>
@@ -167,10 +161,11 @@ let STATE={kategoriUtama:[],kategoriSub:[],rows:[],kodeCache:{}};
 let DOM={};
 function cacheDOM(){
   DOM.modal=document.getElementById('modal'); DOM.form=document.getElementById('bahanForm'); DOM.tbody=document.getElementById('tbodyBahan');
-  DOM.search=document.getElementById('search'); DOM.fid=document.getElementById('fid'); DOM.fhall=document.getElementById('fhall');
-  DOM.forgk=document.getElementById('forgk'); DOM.fidhalal=document.getElementById('fidhalal'); DOM.fkat_utama=document.getElementById('fkat_utama');
-  DOM.fkode_kat=document.getElementById('fkode_kat'); DOM.fkode_auto=document.getElementById('fkode_auto'); DOM.fno_urut=document.getElementById('fno_urut');
+  DOM.search=document.getElementById('search'); DOM.fid=document.getElementById('fid'); DOM.fflag=document.getElementById('fflag');
+  DOM.fidhalal=document.getElementById('fidhalal'); DOM.fkat_utama=document.getElementById('fkat_utama');
+  DOM.fkode_kat=document.getElementById('fkode_kat'); DOM.fkode_auto=document.getElementById('fkode_auto');
   DOM.fnama=document.getElementById('fnama'); DOM.fmerek=document.getElementById('fmerek'); DOM.fsatuan=document.getElementById('fsatuan');
+  DOM.fsupplier=document.getElementById('fsupplier'); DOM.fhp=document.getElementById('fhp'); DOM.falamat=document.getElementById('falamat');
   DOM.fstock_awal=document.getElementById('fstock_awal'); DOM.ftambah=document.getElementById('ftambah'); DOM.fterpakai=document.getElementById('fterpakai');
   DOM.fstock=document.getElementById('fstock'); DOM.fharga_awal=document.getElementById('fharga_awal'); DOM.fharga_baru=document.getElementById('fharga_baru'); DOM.fharga=document.getElementById('fharga');
   STATE.rows=Array.from(document.querySelectorAll('.row-bahan'));
@@ -184,7 +179,15 @@ async function loadKategori(){
     renderKategoriUtama();
   }catch(e){
     STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati',type:'utama'},{code:'dgi',label:'Bahan Hewani / Daging',type:'utama'},{code:'prs',label:'Perasa / Saus',type:'utama'},{code:'pck',label:'Packaging Kertas / Karton',type:'utama'},{code:'cuc',label:'Cuci / Chemical',type:'utama'},{code:'plk',label:'Plastik & Kemasan',type:'utama'}];
-    STATE.kategoriSub=[{code:'syr',label:'Sayuran',parent:'nbt'},{code:'umb',label:'Umbi-umbian',parent:'nbt'},{code:'kcg',label:'Kacang & Bijian',parent:'nbt'},{code:'rmp',label:'Rempah',parent:'nbt'},{code:'srl',label:'Serealia / Beras',parent:'nbt'},{code:'myk',label:'Minyak & Lemak',parent:'nbt'},{code:'buh',label:'Buah',parent:'nbt'},{code:'bdr',label:'Bumbu Dasar',parent:'nbt'},{code:'ugs',label:'Unggas Potong',parent:'dgi'},{code:'sap',label:'Sapi',parent:'dgi'},{code:'lut',label:'Laut / Seafood',parent:'dgi'},{code:'oss',label:'Olahan Susu',parent:'dgi'},{code:'tlr',label:'Telur / Unggas',parent:'dgi'},{code:'ras',label:'Rasa / Saus',parent:'prs'},{code:'ins',label:'Instant / Bumbu Instan',parent:'prs'},{code:'krt',label:'Kertas / Karton',parent:'pck'},{code:'pls',label:'Plastik Styrofoam',parent:'pck'},{code:'cir',label:'Cairan',parent:'cuc'},{code:'mnm',label:'Minuman / Air',parent:'plk'},{code:'sdk',label:'Sendok+garpu plastik',parent:'plk'}];
+    // FIX 2: hanya lowercase sap, bukan Sap
+    STATE.kategoriSub=[
+      {code:'syr',label:'Sayuran',parent:'nbt'}, {code:'umb',label:'Umbi-umbian',parent:'nbt'}, {code:'kcg',label:'Kacang & Bijian',parent:'nbt'}, {code:'rmp',label:'Rempah',parent:'nbt'}, {code:'srl',label:'Serealia / Beras',parent:'nbt'}, {code:'myk',label:'Minyak & Lemak',parent:'nbt'}, {code:'buh',label:'Buah',parent:'nbt'}, {code:'bdr',label:'Bumbu Dasar',parent:'nbt'},
+      {code:'ugs',label:'Unggas Potong',parent:'dgi'}, {code:'sap',label:'Sapi',parent:'dgi'}, {code:'lut',label:'Laut / Seafood',parent:'dgi'}, {code:'oss',label:'Olahan Susu',parent:'dgi'}, {code:'tlr',label:'Telur / Unggas',parent:'dgi'},
+      {code:'ras',label:'Rasa / Saus',parent:'prs'}, {code:'ins',label:'Instant / Bumbu Instan',parent:'prs'},
+      {code:'krt',label:'Kertas / Karton',parent:'pck'}, {code:'pls',label:'Plastik Styrofoam',parent:'pck'},
+      {code:'cir',label:'Cairan',parent:'cuc'},
+      {code:'mnm',label:'Minuman / Air',parent:'plk'}, {code:'sdk',label:'Sendok+garpu plastik',parent:'plk'}
+    ];
     renderKategoriUtama();
   }
 }
@@ -198,33 +201,39 @@ function filterSubKategori(){
   const utamaCode=DOM.fkat_utama?.value;
   if(!utamaCode){ if(DOM.fkode_kat) DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
   const filtered=STATE.kategoriSub.filter(s=>s.parent===utamaCode);
+  // FIX 2: lowercase only, deduplicate case-insensitive
+  const seen=new Set(); const uniq=[];
+  filtered.forEach(s=>{
+    const lc=s.code.toLowerCase();
+    if(!seen.has(lc)){ seen.add(lc); uniq.push({...s, code:lc}); }
+  });
   if(!DOM.fkode_kat) return;
-  DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub Kategori --</option>'+filtered.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
+  DOM.fkode_kat.innerHTML='<option value="">-- Pilih Sub Kategori --</option>'+uniq.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
   genKode();
 }
 function genKode(){
-  const flag=(DOM.fhall?.value?'Halal':(DOM.forgk?.value||'Orgk')).replace(/\s+/g,'');
+  const flag=(DOM.fflag?.value||'Orgk').replace(/\s+/g,'');
   const kat=DOM.fkat_utama?.value||'nbt'; const sub=DOM.fkode_kat?.value||'rmp'; const key=`${kat}-${sub}`; let urut=STATE.kodeCache[key]||1;
   const existing=STATE.rows.filter(r=> (r.dataset.sub===sub || r.dataset.kode?.includes(`${kat}-${sub}`))).length; if(existing>0) urut=existing+1; STATE.kodeCache[key]=urut;
-  const kode=`${flag}-${kat}-${sub}-${String(urut).padStart(3,'0')}`.toLowerCase(); if(DOM.fkode_auto) DOM.fkode_auto.value=kode; if(DOM.fno_urut) DOM.fno_urut.value=urut;
+  const kode=`${flag}-${kat}-${sub}-${String(urut).padStart(3,'0')}`.toLowerCase(); if(DOM.fkode_auto) DOM.fkode_auto.value=kode;
 }
 let searchTimer;
 function filterTable(){ const q=(DOM.search?.value||'').toLowerCase(); if(!q){ STATE.rows.forEach(r=>r.style.display=''); return; } STATE.rows.forEach(r=>{ const name=r.dataset.name||''; r.style.display=name.includes(q)?'':'none'; }); }
 function onSearchInput(){ clearTimeout(searchTimer); searchTimer=setTimeout(filterTable,300); }
-function openModal(){ if(DOM.modal) DOM.modal.classList.remove('hidden'); setupEnterNavigation(); setTimeout(()=>{DOM.fhall?.focus();},100); }
+function openModal(){ if(DOM.modal) DOM.modal.classList.remove('hidden'); setupEnterNavigation(); setTimeout(()=>{DOM.fflag?.focus();},100); }
 function closeModal(){ if(DOM.modal) DOM.modal.classList.add('hidden'); }
 function setupEnterNavigation(){
   const fields=Array.from(document.querySelectorAll('#modal .enter-field'));
   fields.forEach((field,idx)=>{ field.removeEventListener('keydown', field._enterHandler); const handler=(e)=>{ if(e.key==='Enter'){ if(e.shiftKey){ e.preventDefault(); calc(); DOM.form?.requestSubmit(); } else { e.preventDefault(); calc(); const next=fields[idx+1]; if(next){ next.focus(); if(next.select) next.select(); } else { document.querySelector('#bahanForm button[type="submit"]')?.focus(); } } } }; field._enterHandler=handler; field.addEventListener('keydown', handler); });
 }
-function editBahan(b){ if(!b) return; cacheDOM(); if(DOM.fid) DOM.fid.value=b.id||''; if(DOM.fidhalal) DOM.fidhalal.value=b.id_halal||''; if(DOM.fnama) DOM.fnama.value=b.nama_bahan||''; if(DOM.fmerek) DOM.fmerek.value=b.merek||''; if(DOM.fsatuan) DOM.fsatuan.value=b.satuan_default||'Kg'; if(DOM.fstock_awal) DOM.fstock_awal.value=b.stock_qty||0; if(DOM.fharga_awal) DOM.fharga_awal.value=b.harga_per_satuan||0; if(DOM.fharga_baru) DOM.fharga_baru.value=''; if(DOM.fkode_auto) DOM.fkode_auto.value=b.kode_bahan||''; const parts=(b.kode_bahan||'').split('-'); if(parts.length>=3){ const kat=parts[1]; const sub=parts[2]; if(DOM.fkat_utama){ DOM.fkat_utama.value=kat; filterSubKategori(); } setTimeout(()=>{ if(DOM.fkode_kat) DOM.fkode_kat.value=sub; genKode(); },100); } calc(); openModal(); }
+function editBahan(b){ if(!b) return; cacheDOM(); if(DOM.fid) DOM.fid.value=b.id||''; if(DOM.fidhalal) DOM.fidhalal.value=b.id_halal||''; if(DOM.fnama) DOM.fnama.value=b.nama_bahan||''; if(DOM.fmerek) DOM.fmerek.value=b.merek||''; if(DOM.fsatuan) DOM.fsatuan.value=b.satuan_default||'Kg'; if(DOM.fsupplier) DOM.fsupplier.value=b.supplier||''; if(DOM.fhp) DOM.fhp.value=b.no_hp||''; if(DOM.falamat) DOM.falamat.value=b.alamat||''; if(DOM.fstock_awal) DOM.fstock_awal.value=b.stock_qty||0; if(DOM.fharga_awal) DOM.fharga_awal.value=b.harga_per_satuan||0; if(DOM.fharga_baru) DOM.fharga_baru.value=''; if(DOM.fkode_auto) DOM.fkode_auto.value=b.kode_bahan||''; const parts=(b.kode_bahan||'').split('-'); if(parts.length>=3){ const flag=parts[0]; const kat=parts[1]; const sub=parts[2]; if(DOM.fflag) DOM.fflag.value=flag.charAt(0).toUpperCase()+flag.slice(1); if(DOM.fkat_utama){ DOM.fkat_utama.value=kat; filterSubKategori(); } setTimeout(()=>{ if(DOM.fkode_kat) DOM.fkode_kat.value=sub; genKode(); },100); } calc(); openModal(); }
 async function deleteBahan(id){ if(!id||!confirm('Hapus bahan ini?')) return; if(!confirm('Yakin?')) return; const res=await fetch(`/api/bahan/${id}`,{method:'DELETE'}); if(res.ok) location.reload(); else alert('Gagal hapus'); }
 document.addEventListener('DOMContentLoaded', ()=>{
   cacheDOM(); loadKategori();
   DOM.tbody?.addEventListener('click', e=>{ const eb=e.target.closest('.btn-edit'); const db=e.target.closest('.btn-del'); if(eb){ try{ const b=JSON.parse(eb.getAttribute('data-bahan')); editBahan(b);}catch(err){ console.error(err);} } if(db){ deleteBahan(db.dataset.id);} });
   DOM.search?.addEventListener('input', onSearchInput);
   document.querySelectorAll('.calc-trigger').forEach(el=>el.addEventListener('input', calc));
-  DOM.fkode_kat?.addEventListener('change', genKode); DOM.fkat_utama?.addEventListener('change', filterSubKategori); DOM.fhall?.addEventListener('change', genKode);
+  DOM.fkode_kat?.addEventListener('change', genKode); DOM.fkat_utama?.addEventListener('change', filterSubKategori); DOM.fflag?.addEventListener('change', genKode);
   document.getElementById('btnAdd')?.addEventListener('click', openModal); document.getElementById('btnCloseModal')?.addEventListener('click', closeModal);
   setupEnterNavigation();
   DOM.form?.addEventListener('submit', async e=>{
@@ -238,8 +247,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
       satuan_default: DOM.fsatuan?.value,
       stock_qty: sf(DOM.fstock?.value),
       harga_per_satuan: sf(DOM.fharga?.value),
-      id_halal: DOM.fidhalal?.value, // 19 digit
-      hall_flag: DOM.fhall?.value, orgk_flag: DOM.forgk?.value
+      id_halal: DOM.fidhalal?.value,
+      flag: DOM.fflag?.value,
+      hall_flag: DOM.fflag?.value?.toLowerCase()=='hall'?'Hall':'Orgk',
+      orgk_flag: DOM.fflag?.value,
+      supplier: DOM.fsupplier?.value, no_hp: DOM.fhp?.value, alamat: DOM.falamat?.value,
+      merek: DOM.fmerek?.value
     };
     if(!payload.nama_bahan){ alert('Nama wajib'); return; }
     const res=await fetch('/api/bahan/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
