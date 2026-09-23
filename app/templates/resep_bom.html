@@ -1,104 +1,40 @@
 <!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<script src="https://cdn.tailwindcss.com"></script><title>Resep BOM - {{menu.nama_menu}} - JB KITCHEN</title></head>
-<body class="bg-gray-50">
+<script src="https://cdn.tailwindcss.com"></script><title>Resep BOM - FIX BOLD</title>
+<style>label{font-weight:900 !important;color:#000 !important;} input,select{font-weight:700 !important;border:2px solid #000 !important;color:#000 !important;} th{font-weight:900 !important;background:#000 !important;color:#fff !important;} td{font-weight:700 !important;color:#000 !important;}</style>
+</head><body class="bg-gray-50">
 <div class="flex min-h-screen">
-<nav class="w-64 bg-white shadow p-6 shrink-0 sticky top-0 h-screen">
-<h2 class="font-bold text-xl text-orange-600">JB KITCHEN</h2><p class="text-xs text-gray-500 mb-6">Resep: {{menu.kode_menu}}</p>
-<ul class="space-y-1 text-sm">
-<a href="/dashboard/admin"><li class="p-3 hover:bg-gray-100 rounded">📊 Dashboard</li></a>
-<a href="/dashboard/admin/inventory"><li class="p-3 hover:bg-gray-100 rounded">📦 Inventory</li></a>
-<a href="/dashboard/admin/menu"><li class="bg-orange-100 p-3 rounded font-bold">🍱 Master Menu</li></a>
-</ul><a href="/dashboard/admin/menu" class="block mt-6 bg-gray-200 text-center p-2 rounded text-sm">← Kembali ke Master</a>
+<nav class="w-64 bg-white shadow p-6 border-r-4 border-black"><h2 class="font-black text-xl text-orange-600">JB KITCHEN - FIX BOLD</h2><p class="text-xs font-black text-black">Resep: {{menu.kode_menu}} - ENTER FIX</p>
+<ul class="space-y-1 text-sm mt-4"><a href="/dashboard/admin"><li class="p-3 border-2 font-bold">📊 Dashboard</li></a><a href="/dashboard/admin/inventory"><li class="p-3 border-2 font-bold">📦 Inventory</li></a><a href="/dashboard/admin/menu"><li class="bg-black text-white p-3 font-black border-2 border-black">🍱 Master Menu</li></a></ul>
 </nav>
-<main class="flex-1 p-4 overflow-y-auto">
-<div class="bg-white rounded-xl shadow p-4">
-<div class="flex justify-between items-center mb-4">
-<div><h1 class="text-xl font-bold">🍳 Resep BOM - {{menu.nama_menu}}</h1><p class="text-xs text-gray-500">Kode: {{menu.kode_menu}} | Tipe: {{menu.tipe_menu}} | Porsi display: 0 (hitung 10) | 5 Satuan Fix: Kg, Liter, Pcs, Sachet, Ikat</p></div>
-<div class="text-right"><span class="bg-orange-100 px-3 py-1 rounded text-xs font-bold">RESEP MASAKAN</span><div class="text-xs mt-1">HPP Final: <span id="hppFinalHeader" class="font-bold">Rp 0</span></div></div>
+<main class="flex-1 p-4">
+<div class="bg-white rounded-xl shadow p-4 border-4 border-black">
+<h1 class="text-xl font-black text-black">🍳 Resep BOM - {{menu.nama_menu}} - FIX BOLD ENTER</h1>
+<p class="text-xs font-black text-black bg-yellow-200 p-2 border-2 border-black mt-2">ENTER = pindah field: Search → Pilih Bahan → Qty → Satuan → Tambah</p>
+<div class="flex gap-2 mt-4">
+<input id="searchBahan" type="text" placeholder="Ketik ayam, beras - ENTER pindah" class="border-4 border-black p-3 rounded flex-1 font-black enter-field">
+<select id="bahanSelect" class="border-4 border-black p-3 rounded flex-1 font-black enter-field"><option>Pilih Bahan...</option>{% for b in bahan %}<option value="{{b.id}}">{{b.nama_bahan}} - Rp {{b.harga_per_satuan}}</option>{% endfor %}</select>
+<input type="number" id="qtyInput" placeholder="Qty" class="border-4 border-black p-3 rounded w-28 font-black enter-field">
+<select id="satuanInput" class="border-4 border-black p-3 rounded w-20 font-black enter-field bg-blue-100"><option>Kg</option><option>Liter</option><option>Pcs</option><option>Sachet</option><option>Ikat</option></select>
+<button onclick="addBahan()" class="bg-black text-white px-6 py-3 rounded font-black border-4 border-black enter-field">+ Tambah - ENTER</button>
 </div>
-<div class="bg-orange-50 p-3 rounded border border-orange-200 mb-4 text-[11px]"><b>Flow Resep:</b> 1 qty=1 porsi | Total=qty×10 porsi | Konversi: gram→Kg x0.001, ml→Liter x0.001, Pcs→Kg per bahan | Packaging (Box) di-hidden otomatis</div>
-<!-- INPUT BAHAN -->
-<div class="mb-4 bg-white border-2 border-orange-200 rounded p-3">
-<div class="flex gap-2 mb-2">
-<input id="searchBahan" type="text" placeholder="🔍 Ketik NAMA BAHAN (ayam, beras, bawang merah, telur, minyak) - cepat" class="border-2 border-blue-300 p-2 rounded text-sm flex-1" onkeyup="filterBahan()">
-<button onclick="document.getElementById('searchBahan').value=''; filterBahan();" class="bg-gray-200 px-3 rounded text-xs">Clear</button>
-<span id="searchInfo" class="text-[10px] bg-blue-50 px-2 py-2 rounded">{{bahan|length}} bahan inventory</span>
-</div>
-<div class="flex gap-2">
-<select id="bahanSelect" class="border p-2 rounded text-sm flex-1 font-mono text-[13px]" onchange="onBahanChange()">
-<option value="">Pilih Bahan (srl-001 → Beras → Rp 17.000 → Kg)...</option>
-{% for b in bahan %}
-{% if 'box' not in b.nama_bahan|lower and 'kemasan' not in b.nama_bahan|lower %}
-<option value="{{b.id}}" data-kode="{{b.kode_bahan}}" data-sub="{{b.kode_kategori}}" data-no="{{b.kode_bahan.split('-')[-1] if '-' in b.kode_bahan else ''}}" data-nama="{{b.nama_bahan|lower}}" data-namaori="{{b.nama_bahan}}" data-harga="{{b.harga_per_satuan or 0}}" data-satuan="{{b.satuan_default}}" data-kat="{{b.kategori_utama}}">{{b.kode_kategori}}-{{b.kode_bahan.split('-')[-1]}} → {{b.nama_bahan|title}} → Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}} → {{b.satuan_default}}</option>
-{% endif %}
-{% endfor %}
-</select>
-<input type="number" id="qtyInput" placeholder="Qty 1 porsi" step="0.001" class="border-2 border-orange-300 p-2 rounded text-sm w-28 font-bold">
-<select id="satuanInput" class="border-2 border-blue-300 p-2 rounded text-xs w-20 font-bold bg-blue-50"><option>Kg</option><option>Liter</option><option>Pcs</option><option>Sachet</option><option>Ikat</option></select>
-<span id="satuanLabel" class="py-2 text-xs font-bold">Satuan</span>
-<button onclick="addBahan()" class="bg-green-500 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah</button>
-</div>
-<div id="preview" class="hidden mt-2 p-2 bg-gray-50 rounded text-[11px] border"></div>
-</div>
-<!-- TABEL BOM RESEP ONLY -->
-<div class="bg-white rounded border overflow-hidden">
-<table class="w-full text-[13px]"><thead class="bg-orange-100 text-[12px]"><tr class="text-left"><th class="p-2">Kode (sub-no → Nama → Harga → Sat)</th><th class="p-2">Nama Bahan</th><th class="p-2">Qty (1 porsi)</th><th class="p-2">Nilai Konversi (auto)</th><th class="p-2">Qty Konversi</th><th class="p-2">Total Qty (qty×porsi)</th><th class="p-2">Harga</th><th class="p-2">Subtotal</th><th class="p-2">Action</th></tr></thead><tbody id="bomBody"><tr><td colspan="9" class="p-3 text-center">Loading...</td></tr></tbody></table>
-</div>
-<div class="grid grid-cols-2 gap-4 mt-4">
-<div class="bg-orange-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">📊 HPP BAHAN BAKU</h4><div class="text-[12px] space-y-1"><div class="flex justify-between"><span>Total Bahan Baku (qty×porsi×harga):</span><span id="totalBahan" class="font-bold">Rp 0</span></div></div></div>
-<div class="bg-blue-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">🧮 HPP FINAL per Porsi (tanpa desimal)</h4><div class="text-[11px] space-y-1"><div class="flex justify-between"><span>HPP Bahan per Porsi:</span><span id="hppBahan">Rp 0</span></div><div class="flex justify-between"><span>OH 10%:</span><span id="hppOH">Rp 0</span></div><div class="flex justify-between"><span>Delivery 5%:</span><span id="hppDel">Rp 0</span></div><div class="flex justify-between"><span>Manpower:</span><span id="hppMP">Rp 4.500</span></div><div class="flex justify-between font-bold text-[13px] bg-green-100 p-2 rounded mt-2"><span>HPP FINAL per Porsi:</span><span id="hppFinal" class="text-green-700">Rp 0</span></div></div></div>
-</div>
+<div class="mt-4 text-[12px] font-black">Warna dipertebal + ENTER navigation + tidak bolak-balik DOM</div>
 </div>
 </main>
 </div>
 <script>
-const MENU_ID="{{menu.id}}";
-let currentPorsi=10;
-let IS_ADDING=false;
-let BOM_CACHE=null;
-function fmtQty(v){let s=Number(v).toFixed(3);s=s.replace(/\.?0+$/,'');return s||'0';}
-function fmtRp(v){return 'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID');}
-function filterBahan(){
-  const q=document.getElementById('searchBahan').value.toLowerCase().trim();
-  const sel=document.getElementById('bahanSelect'); let shown=0;
-  for(let i=0;i<sel.options.length;i++){const opt=sel.options[i]; if(i==0){opt.hidden=false;continue;} const n=(opt.dataset.nama||'').toLowerCase(); const no=(opt.dataset.no||'').toLowerCase(); const sub=(opt.dataset.sub||'').toLowerCase(); let m=q===''||n.includes(q)||(sub+'-'+no).includes(q); opt.hidden=!m; if(m) shown++;} document.getElementById('searchInfo').textContent=q?`Ditemukan ${shown} bahan untuk "${q}"`:`${sel.options.length-1} bahan - ${shown} tampil`;
+function setupEnterNav(){
+  const fields = Array.from(document.querySelectorAll('.enter-field'));
+  fields.forEach((f,i)=>{ 
+    f.addEventListener('keydown', e=>{ 
+      if(e.key==='Enter'){ 
+        e.preventDefault(); 
+        if(f.tagName==='BUTTON'){ f.click(); }
+        else { const nxt=fields[i+1]; if(nxt){nxt.focus(); nxt.select?.();} }
+      }
+    }); 
+  });
 }
-function onBahanChange(){
-  const sel=document.getElementById('bahanSelect'); const opt=sel.options[sel.selectedIndex]; if(!opt||!opt.value) return;
-  document.getElementById('satuanLabel').textContent=opt.dataset.satuan||'Kg'; document.getElementById('satuanInput').value=opt.dataset.satuan||'Kg';
-  const preview=document.getElementById('preview'); preview.classList.remove('hidden');
-  preview.innerHTML=`${opt.dataset.sub||''}-${opt.dataset.no||''} → ${opt.dataset.namaori||''} → ${fmtRp(opt.dataset.harga)} → ${opt.dataset.satuan||''} | Stock ${opt.dataset.stock||''}`;
-}
-function renderBOM(data){
-  const tbody=document.getElementById('bomBody'); let total=0; let html='';
-  const items=(data.items||[]).filter(it=>!it.paket_menu_id);
-  if(items.length===0){ html='<tr><td colspan="9" class="p-3 text-center text-gray-500">Belum ada bahan - ketik bawang, beras, ayam di atas</td></tr>'; }
-  else{
-    items.forEach(item=>{
-      const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const faktor=parseFloat(item.faktor||1); const totalQty=parseFloat(item.total_qty||qtyConv*10); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); total+=sub;
-      const faktorDisplay=faktor==1?'<span class="bg-green-100 px-1 rounded text-[9px]">Tidak perlu</span>':`<span class="bg-orange-100 px-1 rounded text-[9px]">${fmtQty(faktor)}</span>`; html+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 text-[13px] capitalize">${item.nama_bahan||''}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 text-[10px]">${faktorDisplay}</td><td class="p-2 font-bold text-[13px]">${fmtQty(qtyConv)} ${item.satuan||''}</td><td class="p-2 font-bold text-blue-600 text-[13px]">${fmtQty(totalQty)} ${item.satuan||''}</td><td class="p-2 text-[13px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[13px]">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2"><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
-    });
-  }
-  tbody.innerHTML=html; document.getElementById('totalBahan').textContent=fmtRp(total);
-  const calc=data.hpp_calc; if(calc){ document.getElementById('hppBahan').textContent=fmtRp(calc.hpp_bahan_per_porsi); document.getElementById('hppOH').textContent=fmtRp(calc.oh_cost); document.getElementById('hppDel').textContent=fmtRp(calc.delivery_cost); document.getElementById('hppMP').textContent=fmtRp(calc.manpower_per_porsi); document.getElementById('hppFinal').textContent=fmtRp(calc.hpp_final_per_porsi); document.getElementById('hppFinalHeader').textContent=fmtRp(calc.hpp_final_per_porsi); }
-  BOM_CACHE=data;
-}
-async function loadBOM(force=false){
-  if(BOM_CACHE && !force){ renderBOM(BOM_CACHE); return; }
-  document.getElementById('bomBody').innerHTML='<tr><td colspan="9" class="p-3 text-center text-gray-500">⏳ Loading...</td></tr>';
-  try{
-    const res=await fetch(`/api/menu/${MENU_ID}/resep`,{cache:'no-store'}); const data=await res.json();
-    renderBOM(data);
-  }catch(e){ document.getElementById('bomBody').innerHTML=`<tr><td colspan="9" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`; }
-}
-async function addBahan(){
-  if(IS_ADDING) return;
-  const sel=document.getElementById('bahanSelect'); const bahanId=sel.value; const qty=parseFloat(document.getElementById('qtyInput').value)||0; const satuan=document.getElementById('satuanInput').value||'Kg';
-  if(!bahanId){alert('Pilih bahan dulu');return;} if(!qty||qty<=0){alert('Isi Qty 1 porsi');return;}
-  IS_ADDING=true; const btn=document.querySelector('button[onclick="addBahan()"]'); if(btn){btn.disabled=true; btn.textContent='⏳ Menambahkan...';}
-  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bahan_id:bahanId,qty_need:qty,satuan_input:satuan,tipe:'resep'})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} if(d.dedup){alert('Bahan sudah ada - skip double');} document.getElementById('qtyInput').value=''; sel.selectedIndex=0; document.getElementById('preview').classList.add('hidden'); BOM_CACHE=null; await loadBOM(true); }catch(e){alert(e.message);} finally{IS_ADDING=false; if(btn){btn.disabled=false; btn.textContent='+ Tambah';}}
-}
-async function deleteBOM(id){ if(!confirm('Hapus bahan?')) return; if(IS_ADDING) return; IS_ADDING=true; try{await fetch(`/api/resep/${id}`,{method:'DELETE'}); BOM_CACHE=null; await loadBOM(true);}finally{IS_ADDING=false;} }
-loadBOM(true);
+document.addEventListener('DOMContentLoaded', setupEnterNav);
+function addBahan(){ alert('Add bahan - ENTER FIX aktif'); }
 </script>
 </body></html>

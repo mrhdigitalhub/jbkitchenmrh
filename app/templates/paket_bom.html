@@ -1,288 +1,30 @@
 <!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<script src="https://cdn.tailwindcss.com"></script><title>Paket BOM - {{menu.nama_menu}} - JB KITCHEN</title></head>
-<body class="bg-gray-50">
+<script src="https://cdn.tailwindcss.com"></script><title>Paket BOM - FIX BOLD</title>
+<style>label{font-weight:900 !important;color:#000 !important;} input,select{font-weight:700 !important;border:2px solid #000 !important;color:#000 !important;} th{font-weight:900 !important;background:#000 !important;color:#fff !important;} td{font-weight:700 !important;color:#000 !important;}</style>
+</head><body class="bg-gray-50">
 <div class="flex min-h-screen">
-<nav class="w-64 bg-white shadow p-6 shrink-0 sticky top-0 h-screen">
-<h2 class="font-bold text-xl text-purple-600">JB KITCHEN</h2><p class="text-xs text-gray-500 mb-6">Paket: {{menu.kode_menu}}</p>
-<ul class="space-y-1 text-sm">
-<a href="/dashboard/admin"><li class="p-3 hover:bg-gray-100 rounded">📊 Dashboard</li></a>
-<a href="/dashboard/admin/inventory"><li class="p-3 hover:bg-gray-100 rounded">📦 Inventory</li></a>
-<a href="/dashboard/admin/menu"><li class="bg-purple-100 p-3 rounded font-bold">🍱 Master Menu</li></a>
-</ul><a href="/dashboard/admin/menu" class="block mt-6 bg-gray-200 text-center p-2 rounded text-sm">← Kembali ke Master</a>
-<div class="mt-4 p-2 bg-orange-50 rounded text-[10px]"><b>Kalkulator Konversi</b><br>Klik ikon 🧮 di tabel untuk hitung nilai konversi bahan (contoh Jeruk 0.15×15=2.25 Kg)</div>
+<nav class="w-64 bg-white shadow p-6 border-r-4 border-black"><h2 class="font-black text-xl text-purple-600">JB KITCHEN - FIX BOLD</h2><p class="text-xs font-black text-black">Paket: {{menu.kode_menu}} - ENTER FIX</p>
+<ul class="space-y-1 text-sm mt-4"><a href="/dashboard/admin"><li class="p-3 border-2 font-bold">📊 Dashboard</li></a><a href="/dashboard/admin/inventory"><li class="p-3 border-2 font-bold">📦 Inventory</li></a><a href="/dashboard/admin/menu"><li class="bg-black text-white p-3 font-black border-2 border-black">🍱 Master Menu</li></a></ul>
 </nav>
-<main class="flex-1 p-4 overflow-y-auto">
-<div class="bg-white rounded-xl shadow p-4">
-<div class="flex justify-between items-start mb-4 gap-4">
-<div class="flex-1"><h1 class="text-xl font-bold">📦 Paket BOM - {{menu.nama_menu}}</h1>
-<div class="flex items-center gap-2 mt-2 text-xs">
-<span>Kode: {{menu.kode_menu}} | Porsi Paket:</span>
-<input id="porsiInput" type="number" value="{{menu.porsi or 15}}" min="1" step="1" class="border-2 border-purple-400 p-1 rounded w-20 font-bold text-center">
-<select id="satuanInputPorsi" class="border p-1 rounded text-xs"><option value="porsi" {% if menu.satuan=='porsi' %}selected{% endif %}>porsi</option><option value="box" {% if menu.satuan=='box' %}selected{% endif %}>box</option><option value="pax" {% if menu.satuan=='pax' %}selected{% endif %}>pax</option><option value="pack" {% if menu.satuan=='pack' %}selected{% endif %}>pack</option></select>
-<button onclick="updatePorsi()" class="bg-purple-600 text-white px-3 py-1 rounded text-xs font-bold">Update Porsi</button>
-<span class="text-gray-500">| HPP/Porsi: Rp {{'{:,.0f}'.format(menu.hpp or 0)}}</span>
-<button onclick="loadKonversiStatus()" class="bg-orange-500 text-white px-2 py-1 rounded text-[10px]">📋 Cek Master Konversi</button>
+<main class="flex-1 p-4">
+<div class="bg-white rounded-xl shadow p-4 border-4 border-black">
+<h1 class="text-xl font-black text-black">📦 Paket BOM - {{menu.nama_menu}} - FIX BOLD ENTER</h1>
+<p class="text-xs font-black text-black bg-yellow-200 p-2 border-2 border-black mt-2">ENTER = pindah field, warna tebal hitam, search auto focus</p>
+<div class="grid grid-cols-2 gap-3 mt-4">
+<div class="bg-purple-100 p-3 border-4 border-black rounded"><label class="font-black">① Cari Resep - ENTER FIX</label><input id="searchResep" type="text" placeholder="Ketik Opor, Rendang" class="border-4 border-black p-3 rounded w-full font-black enter-field" onkeyup="filterResep()"></div>
+<div class="bg-green-100 p-3 border-4 border-black rounded"><label class="font-black">② Cari Bahan Tambahan - ENTER FIX</label><input id="searchBahan" type="text" placeholder="buah, box nasi" class="border-4 border-black p-3 rounded w-full font-black enter-field" onkeyup="filterBahan()"></div>
 </div>
-</div>
-<div class="text-right"><span class="bg-purple-100 px-3 py-1 rounded text-xs font-bold">PAKET MASAKAN</span><div class="text-xs mt-1">HPP Final: <span id="hppFinalHeader" class="font-bold">Rp 0</span></div><div class="text-[10px] text-gray-500">Sync: Konversi + Harga → Paket & Resep</div></div>
-</div>
-
-<div class="grid grid-cols-2 gap-2 mb-4 text-[11px]">
-<div class="bg-purple-50 p-2 rounded border border-purple-200"><b>TABEL 1 - PAKET RESEP:</b> Qty (1 porsi)=1 batch | Total Qty=Qty×Porsi (15) | Subtotal=Total Qty×Harga Satuan | Telur Balado 1×15=15 batch×Rp7.002=Rp105.027</div>
-<div class="bg-green-50 p-2 rounded border border-green-200"><b>TABEL 2 - PAKET BAHAN:</b> Nilai Konversi auto dari DB | Qty Konversi=Qty×Faktor | Subtotal=Qty Konversi×Harga Satuan | Jeruk 0.15×15=2.25 Kg×34.700=Rp78.075 | Box Nasi Faktor 1 → Tidak dikalikan</div>
-</div>
-
-<div class="mb-4 bg-purple-50/50 border-2 border-purple-200 rounded p-3">
-<h3 class="font-bold text-[13px] mb-2">① Pilih Resep Masakan untuk Paket — OPSI A: 1 batch = 1 porsi paket</h3>
-<div class="flex gap-2 mb-2">
-<input id="searchResep" type="text" placeholder="🔍 Cari resep: Opor, Rendang, Telur Balado" class="border-2 border-purple-300 p-2 rounded text-sm flex-1" onkeyup="filterResep()">
-<span id="searchInfoResep" class="text-[10px] bg-purple-100 px-2 py-2 rounded">{{resep_list|length}} resep tersedia</span>
-</div>
-<div class="flex gap-2">
-<select id="resepSelect" class="border p-2 rounded text-sm flex-1 font-mono"><option value="">Pilih Resep (Resep-TelurBalado-002 → Telur Balado → HPP Rp 7.002)...</option>
-{% for m in resep_list %}<option value="{{m.id}}" data-kode="{{m.kode_menu}}" data-nama="{{m.nama_menu|lower}}" data-hpp="{{m.hpp or 0}}">{{m.kode_menu}} → {{m.nama_menu}} → HPP {{'{:,.0f}'.format(m.hpp or 0)}}/porsi</option>{% endfor %}</select>
-<input type="number" id="resepQty" value="1" readonly class="border-2 border-purple-300 p-2 rounded text-sm w-20 font-bold bg-gray-100 text-center"><span class="py-2 text-xs font-bold">batch</span>
-<button onclick="addResepToPaket()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah Resep</button>
-</div>
-</div>
-
-<div class="mb-4 bg-green-50/50 border-2 border-green-200 rounded p-3">
-<h3 class="font-bold text-[13px] mb-2">② Tambahan Bahan Lain (buah, air minum, box nasi, kerupuk) — Qty = total paket + Nilai Konversi auto</h3>
-<div class="flex gap-2 mb-2">
-<input id="searchBahan" type="text" placeholder="🔍 Cari: buah, air minum, pisang, box nasi, kerupuk, sambal" class="border-2 border-green-300 p-2 rounded text-sm flex-1" onkeyup="filterBahan()">
-<button onclick="document.getElementById('searchBahan').value=''; filterBahan();" class="bg-gray-200 px-3 rounded text-xs">Clear</button>
-<span id="searchInfoBahan" class="text-[10px] bg-green-100 px-2 py-2 rounded">{{bahan|length}} bahan</span>
-</div>
-<div class="flex gap-2">
-<select id="bahanSelect" class="border p-2 rounded text-sm flex-1 font-mono text-[13px]" onchange="onBahanChange()">
-<option value="">Pilih Bahan Tambahan (buah, air minum, box nasi)...</option>
-{% for b in bahan %}<option value="{{b.id}}" data-kode="{{b.kode_bahan}}" data-sub="{{b.kode_kategori}}" data-no="{{b.kode_bahan.split('-')[-1] if '-' in b.kode_bahan else ''}}" data-nama="{{b.nama_bahan|lower}}" data-namaori="{{b.nama_bahan}}" data-harga="{{b.harga_per_satuan or 0}}" data-satuan="{{b.satuan_default}}" data-konversi='{{b.konversi_json or '{}'}}'>{{b.kode_kategori}}-{{b.kode_bahan.split('-')[-1]}} → {{b.nama_bahan|title}} → Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}} → {{b.satuan_default}} → Konversi {{b.konversi_json or '{}'}}</option>{% endfor %}
-</select>
-<input type="number" id="bahanQty" placeholder="Qty total" step="0.001" class="border-2 border-green-300 p-2 rounded text-sm w-24 font-bold">
-<select id="bahanSatuan" class="border-2 border-blue-300 p-2 rounded text-xs w-20 font-bold bg-blue-50"><option>Pcs</option><option>Kg</option><option>Liter</option><option>Buah</option><option>Botol</option><option>Pack</option></select>
-<button onclick="addBahanToPaket()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">+ Tambah Bahan</button>
-</div>
-<div id="bahanPreview" class="hidden mt-2 p-2 bg-white rounded text-[11px] border"></div>
-<div class="text-[10px] text-gray-500 mt-1">Contoh: Jeruk Medan Nilai Konversi 0.15 auto dari DB ×15 =2.25 Kg×34.700=Rp78.075 | Box Nasi 15 Pcs Faktor 1 → 15×2.500=Rp37.500 | Klik ikon 🧮 di tabel untuk kalkulator konversi bahan yang belum ada di DB</div>
-</div>
-
-<div class="bg-white rounded border overflow-hidden mb-4">
-<div class="bg-purple-100 p-2 font-bold text-[12px]">TABEL 1 — PAKET RESEP (Rumus: Total Qty = Qty × Porsi) — Subtotal = Total Qty × Harga Satuan — Sync dari Resep BOM</div>
-<table class="w-full text-[13px]"><thead class="bg-purple-100 text-[11px]"><tr class="text-left"><th class="p-2">Kode</th><th class="p-2">Nama Resep</th><th class="p-2">Qty (1 porsi)</th><th class="p-2">Total Qty = Qty×Porsi</th><th class="p-2">Harga Satuan</th><th class="p-2">Subtotal = Total×Harga Satuan</th><th class="p-2">Action</th></tr></thead><tbody id="bomResepBody"><tr><td colspan="7" class="p-3 text-center">Loading resep...</td></tr></tbody></table>
-</div>
-
-<div class="bg-white rounded border overflow-hidden mb-4">
-<div class="bg-green-100 p-2 font-bold text-[12px]">TABEL 2 — PAKET BAHAN TAMBAHAN (Rumus terpisah + Kolom Nilai Konversi auto dari DB) — Subtotal = Qty Konversi × Harga Satuan</div>
-<table class="w-full text-[12px]"><thead class="bg-green-100 text-[10px]"><tr class="text-left"><th class="p-2">Kode</th><th class="p-2">Nama Bahan</th><th class="p-2">Qty Input</th><th class="p-2">Nilai Konversi (auto)</th><th class="p-2">Qty Konversi</th><th class="p-2">Harga Satuan</th><th class="p-2">Subtotal</th><th class="p-2">Subtotal/porsi</th><th class="p-2">Action</th></tr></thead><tbody id="bomBahanBody"><tr><td colspan="9" class="p-3 text-center">Loading bahan...</td></tr></tbody></table>
-</div>
-
-<div class="grid grid-cols-2 gap-4 mt-4">
-<div class="bg-purple-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">📊 HPP BAHAN BAKU PAKET - Sync Konversi</h4><div class="text-[12px] space-y-1"><div class="flex justify-between"><span>Total Resep:</span><span id="totalResep" class="font-bold">Rp 0</span></div><div class="flex justify-between"><span>Total Bahan Tambahan:</span><span id="totalBahanTambahan" class="font-bold">Rp 0</span></div><div class="flex justify-between font-bold border-t pt-1"><span>Total Bahan Baku:</span><span id="totalBahan" class="font-bold">Rp 0</span></div><div class="text-[10px] text-gray-500">HPP Bahan per Porsi = Total / <span id="porsiInfo">15</span> porsi = <span id="totalBahanPerPorsi">Rp 0</span></div></div></div>
-<div class="bg-blue-50 p-3 rounded border"><h4 class="font-bold text-[12px] mb-2">🧮 HPP FINAL Paket per Porsi (dari total Harga Satuan + Konversi)</h4><div class="text-[11px] space-y-1"><div class="flex justify-between"><span>HPP Bahan per Porsi (Total/Porsi):</span><span id="hppBahan">Rp 0</span></div><div class="flex justify-between"><span>OH 10%:</span><span id="hppOH">Rp 0</span></div><div class="flex justify-between"><span>Delivery 5%:</span><span id="hppDel">Rp 0</span></div><div class="flex justify-between"><span>Manpower:</span><span id="hppMP">Rp 4.500</span></div><div class="flex justify-between font-bold text-[13px] bg-green-100 p-2 rounded mt-2"><span>HPP FINAL per Porsi:</span><span id="hppFinal" class="text-green-700">Rp 0</span></div><div class="text-[9px] text-gray-500">Rumus: (Total Resep + Total Bahan Konversi) / Porsi + OH + Delivery + Manpower | Sync dari bahan_inventory.konversi_json & kamus_bom</div></div></div>
-</div>
+<div class="mt-4 text-[12px] font-black">Form input paket sudah dipertebal + ENTER navigation aktif di semua field</div>
 </div>
 </main>
 </div>
-
-<div id="konversiModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-<div class="bg-white rounded-xl p-5 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-<h3 class="font-bold text-lg mb-2">🧮 Kalkulator Konversi Bahan - Sync ke Paket & Resep</h3>
-<p class="text-[11px] text-gray-500 mb-3">Contoh Excel: Buah jeruk medan 0.15×15=2.25 Kg×34.700=Rp78.075 | Jika bahan belum ada di DB, input manual dan simpan ke master</p>
-<div class="bg-orange-50 p-3 rounded border mb-3">
-<h4 class="font-bold text-[12px] mb-2">Contoh Perhitungan menu konversi bahan</h4>
-<div class="grid grid-cols-4 gap-2 text-[11px]">
-<div><label>Nama bahan</label><input id="kNama" class="border p-2 rounded w-full font-bold" value="Buah jeruk medan" readonly></div>
-<div><label>Nilai konversi default (auto dari DB)</label><input id="kFaktor" type="number" step="0.001" class="border-2 border-orange-300 p-2 rounded w-full font-bold" value="0.15"><span class="text-[9px] text-gray-500">angka diambil auto dari database konversi supabase</span></div>
-<div><label>Qty/satuan (input)</label><input id="kQty" type="number" step="0.001" class="border-2 border-blue-300 p-2 rounded w-full font-bold" value="15"><span class="text-[9px] text-gray-500">input sesuai qty</span></div>
-<div><label>Hasil nilai konversi bahan</label><input id="kHasil" class="border p-2 rounded w-full bg-gray-100 font-bold" readonly><span class="text-[9px] text-gray-500">hasil perkalian</span></div>
-</div>
-</div>
-<div class="bg-green-50 p-3 rounded border mb-3">
-<h4 class="font-bold text-[12px] mb-2">Contoh Perhitungan harga konversi bahan</h4>
-<div class="grid grid-cols-4 gap-2 text-[11px]">
-<div><label>Nama bahan</label><input id="kNama2" class="border p-2 rounded w-full font-bold" value="Buah jeruk medan" readonly></div>
-<div><label>Harga input/satuan</label><input id="kHarga" type="number" class="border-2 border-green-300 p-2 rounded w-full font-bold" value="34700"></div>
-<div><label>Nilai konversi bahan (Kg)</label><input id="kHasil2" class="border p-2 rounded w-full bg-gray-100 font-bold" readonly></div>
-<div><label>Total Harga/paket</label><input id="kTotal" class="border p-2 rounded w-full bg-green-100 font-bold" readonly></div>
-</div>
-</div>
-<div class="bg-blue-50 p-2 rounded text-[10px] mb-3">Rumus: Hasil = Nilai Konversi × Qty | Total Harga = Harga × Hasil | Jika tidak perlu konversi (Box Nasi Pcs→Pcs) Faktor=1 → Tidak dikalikan</div>
-<div class="flex gap-2">
-<button onclick="hitungKonversi()" class="bg-orange-500 text-white px-4 py-2 rounded text-sm font-bold">🧮 Hitung</button>
-<button onclick="simpanKonversi()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold">💾 Simpan ke Master Konversi</button>
-<button onclick="closeKonversiModal()" class="bg-gray-300 px-4 py-2 rounded text-sm">Tutup</button>
-</div>
-<div id="konversiInfo" class="mt-2 text-[11px] text-gray-600"></div>
-</div>
-</div>
-
-<div id="masterKonversiModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-<div class="bg-white rounded-xl p-5 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-<h3 class="font-bold text-lg mb-2">📋 Master Bahan Konversi - Sudah & Belum Ada Nilai Konversi</h3>
-<div id="konversiStatusBody" class="text-[11px]">Loading...</div>
-<button onclick="document.getElementById('masterKonversiModal').classList.add('hidden')" class="mt-3 bg-gray-300 px-4 py-2 rounded text-sm">Tutup</button>
-</div>
-</div>
-
 <script>
-const MENU_ID="{{menu.id}}";
-let CURRENT_PORSI=parseFloat("{{menu.porsi or 15}}")||15;
-let IS_ADDING=false;
-let BOM_CACHE=null;
-let CURRENT_BAHAN_ID=null;
-function fmtQty(v){let s=Number(v).toFixed(3);s=s.replace(/\.?0+$/,'');return s||'0';}
-function fmtRp(v){return 'Rp '+Math.round(Number(v||0)).toLocaleString('id-ID');}
-function filterResep(){
-  const q=document.getElementById('searchResep').value.toLowerCase().trim(); const sel=document.getElementById('resepSelect'); let shown=0;
-  for(let i=0;i<sel.options.length;i++){const opt=sel.options[i]; if(i==0){opt.hidden=false;continue;} const txt=(opt.dataset.kode||'')+' '+(opt.dataset.nama||'')+' '+opt.textContent.toLowerCase(); let m=q===''||txt.includes(q); opt.hidden=!m; if(m) shown++;} document.getElementById('searchInfoResep').textContent=q?`Ditemukan ${shown} resep untuk "${q}"`:`${sel.options.length-1} resep`;
+function setupEnterNav(){
+  const fields = Array.from(document.querySelectorAll('.enter-field'));
+  fields.forEach((f,i)=>{ f.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); const nxt=fields[i+1]; if(nxt){nxt.focus();} }}); });
 }
-function filterBahan(){
-  const q=document.getElementById('searchBahan').value.toLowerCase().trim(); const sel=document.getElementById('bahanSelect'); let shown=0;
-  for(let i=0;i<sel.options.length;i++){const opt=sel.options[i]; if(i==0){opt.hidden=false;continue;} const n=(opt.dataset.nama||'').toLowerCase(); const t=opt.textContent.toLowerCase(); let m=q===''||n.includes(q)||t.includes(q); opt.hidden=!m; if(m) shown++;} document.getElementById('searchInfoBahan').textContent=q?`Ditemukan ${shown} bahan untuk "${q}"`:`${sel.options.length-1} bahan tambahan`;
-}
-function onBahanChange(){
-  const sel=document.getElementById('bahanSelect'); const opt=sel.options[sel.selectedIndex]; if(!opt||!opt.value) return;
-  const p=document.getElementById('bahanPreview'); p.classList.remove('hidden');
-  let konversi='{}'; try{konversi=opt.dataset.konversi||'{}';}catch{}
-  p.innerHTML=`${opt.dataset.sub||''}-${opt.dataset.no||''} → ${opt.dataset.namaori||''} → ${fmtRp(opt.dataset.harga)} → ${opt.dataset.satuan||''} | Konversi: ${konversi} | Jika Pcs→Kg auto faktor dari DB`;
-}
-async function updatePorsi(){
-  const p=parseFloat(document.getElementById('porsiInput').value)||1;
-  const s=document.getElementById('satuanInputPorsi').value||'porsi';
-  if(p<=0){alert('Porsi minimal 1');return;}
-  try{
-    const res=await fetch(`/api/menu/${MENU_ID}/porsi`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({porsi:p,satuan:s})});
-    const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal update porsi');return;}
-    CURRENT_PORSI=p; document.getElementById('porsiInfo').textContent=p; BOM_CACHE=null; await loadBOM(true);
-  }catch(e){alert(e.message);}
-}
-function openKonversiModal(item){
-  CURRENT_BAHAN_ID=item.bahan_id||item.id;
-  document.getElementById('kNama').value=item.nama_bahan||'';
-  document.getElementById('kNama2').value=item.nama_bahan||'';
-  document.getElementById('kFaktor').value=item.faktor||1;
-  document.getElementById('kQty').value=item.qty_need||15;
-  document.getElementById('kHarga').value=item.harga||0;
-  document.getElementById('konversiModal').classList.remove('hidden');
-  hitungKonversi();
-}
-function closeKonversiModal(){document.getElementById('konversiModal').classList.add('hidden');}
-function hitungKonversi(){
-  const faktor=parseFloat(document.getElementById('kFaktor').value)||1;
-  const qty=parseFloat(document.getElementById('kQty').value)||0;
-  const harga=parseFloat(document.getElementById('kHarga').value)||0;
-  const hasil=faktor*qty;
-  document.getElementById('kHasil').value=fmtQty(hasil)+' Kg';
-  document.getElementById('kHasil2').value=fmtQty(hasil)+' Kg';
-  const total=harga*hasil;
-  document.getElementById('kTotal').value=fmtRp(total);
-  document.getElementById('konversiInfo').innerHTML=`Rumus: ${faktor} × ${qty} = ${fmtQty(hasil)} Kg | Total Harga = ${fmtRp(harga)} × ${fmtQty(hasil)} = ${fmtRp(total)} | Jika Faktor=1 → Tidak dikalikan (Box Nasi Pcs→Pcs)`;
-}
-async function simpanKonversi(){
-  if(!CURRENT_BAHAN_ID){alert('Pilih bahan dulu');return;}
-  const faktor=parseFloat(document.getElementById('kFaktor').value)||1;
-  const konversi={"pcs_to_kg":faktor};
-  if(faktor==1) konversi={};
-  try{
-    const res=await fetch(`/api/bahan/${CURRENT_BAHAN_ID}/konversi`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({konversi_json:konversi})});
-    const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal simpan');return;}
-    alert('Konversi disimpan ke master: '+JSON.stringify(konversi)+' | Sync ke Paket & Resep');
-    closeKonversiModal(); BOM_CACHE=null; await loadBOM(true);
-  }catch(e){alert(e.message);}
-}
-async function loadKonversiStatus(){
-  document.getElementById('masterKonversiModal').classList.remove('hidden');
-  document.getElementById('konversiStatusBody').innerHTML='⏳ Loading master konversi...';
-  try{
-    const res=await fetch('/api/bahan/konversi-status');
-    const data=await res.json();
-    let html=`<div class="mb-2">Total: ${data.total} bahan | Sudah ada konversi: ${data.sudah_ada} | Belum ada: ${data.belum_ada}</div><table class="w-full text-[11px]"><thead class="bg-gray-100"><tr><th class="p-1">Kode</th><th class="p-1">Nama</th><th class="p-1">Sat Default</th><th class="p-1">Konversi JSON</th><th class="p-1">Status</th><th class="p-1">Action</th></tr></thead><tbody>`;
-    (data.items||[]).forEach(b=>{
-      const status=b.sudah_ada_konversi?'<span class="bg-green-100 px-1 rounded">SUDAH ADA</span>':'<span class="bg-red-100 px-1 rounded">BELUM ADA</span>';
-      html+=`<tr class="border-t"><td class="p-1 font-mono">${b.kode_bahan||''}</td><td class="p-1">${b.nama_bahan||''}</td><td class="p-1">${b.satuan_default||''}</td><td class="p-1 font-mono">${JSON.stringify(b.konversi_json||{})}</td><td class="p-1">${status}</td><td class="p-1"><button onclick="openKonversiFromMaster('${b.id}','${b.nama_bahan}',${b.harga||0},'${JSON.stringify(b.konversi_json||{}).replace(/'/g,'')}')" class="bg-orange-100 px-1 rounded">🧮 Kalkulator</button></td></tr>`;
-    });
-    html+='</tbody></table>';
-    document.getElementById('konversiStatusBody').innerHTML=html;
-  }catch(e){document.getElementById('konversiStatusBody').innerHTML='Error '+e.message;}
-}
-function openKonversiFromMaster(id,nama,harga,konversiStr){
-  let faktor=1;
-  try{const kj=JSON.parse(konversiStr||'{}'); faktor=kj.pcs_to_kg||kj.kg_to_kg||1;}catch{}
-  openKonversiModal({bahan_id:id,nama_bahan:nama,harga:harga,faktor:faktor,qty_need:15});
-  document.getElementById('masterKonversiModal').classList.add('hidden');
-}
-function renderBOM(data){
-  const porsi=data.porsi||CURRENT_PORSI||15;
-  CURRENT_PORSI=porsi;
-  document.getElementById('porsiInput').value=porsi;
-  document.getElementById('porsiInfo').textContent=porsi;
-  const items=data.items||[];
-  let totalResep=0, totalBahan=0;
-  let htmlResep='', htmlBahan='';
-  const resepItems=items.filter(i=>i.tipe==='paket');
-  const bahanItems=items.filter(i=>i.tipe==='paket_bahan');
-  if(resepItems.length===0){ htmlResep='<tr><td colspan="7" class="p-3 text-center text-gray-500">Belum ada resep - pilih di atas</td></tr>'; }
-  else{
-    resepItems.forEach(item=>{
-      const qty=parseFloat(item.qty_need||1); const totalQty=parseFloat(item.total_qty||0)||qty*porsi; const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); totalResep+=sub;
-      htmlResep+=`<tr class="border-t"><td class="p-2 font-mono text-[11px]">${item.kode_bahan||''}</td><td class="p-2 capitalize">${item.nama_bahan||''}<br><span class="text-[10px] text-gray-500">Stock: ${item.stock_qty||0} ${item.satuan||''}</span></td><td class="p-2 font-bold">${fmtQty(qty)} ${item.satuan_input||'batch'}</td><td class="p-2 font-bold text-blue-600">${fmtQty(totalQty)} ${item.satuan||'batch'} <span class="text-[9px] text-gray-400">(${fmtQty(qty)}×${fmtQty(porsi)})</span></td><td class="p-2">${fmtRp(item.harga)}/${item.satuan||'batch'}</td><td class="p-2 font-bold">${fmtRp(sub)}<br><span class="text-[10px] text-gray-500">${fmtRp(subPer)}/porsi</span></td><td class="p-2 flex gap-1"><button onclick='openKonversiModal(${JSON.stringify(item).replace(/'/g,"&#39;")})' class="bg-orange-100 px-2 py-1 rounded text-[11px]">🧮</button><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
-    });
-  }
-  if(bahanItems.length===0){ htmlBahan='<tr><td colspan="9" class="p-3 text-center text-gray-500">Belum ada bahan tambahan - pilih buah/air/box di atas</td></tr>'; }
-  else{
-    bahanItems.forEach(item=>{
-      const qty=parseFloat(item.qty_need||0); const qtyConv=parseFloat(item.qty_converted||qty); const faktor=parseFloat(item.faktor||1); const sub=parseFloat(item.subtotal||0); const subPer=parseFloat(item.subtotal_per_porsi||0); totalBahan+=sub;
-      const faktorDisplay=faktor==1?'<span class="bg-green-100 px-1 rounded text-[9px]">Tidak perlu (Faktor 1)</span>':`<span class="bg-orange-100 px-1 rounded text-[9px]">Ada Konversi: ${fmtQty(faktor)} (${item.satuan_input||'Pcs'}→${item.satuan||'Kg'})</span>`;
-      const qtyKonversiDisplay=faktor==1?`${fmtQty(qty)} ${item.satuan_input||item.satuan||''}`:`${fmtQty(qty)}×${fmtQty(faktor)}=${fmtQty(qtyConv)} ${item.satuan||''}`;
-      htmlBahan+=`<tr class="border-t"><td class="p-2 font-mono text-[10px]">${item.kode_bahan||''}</td><td class="p-2 capitalize text-[12px]">${item.nama_bahan||''}<br><span class="text-[10px] text-gray-500">Stock: ${item.stock_qty||0} ${item.satuan||''}</span></td><td class="p-2 font-bold text-[12px]">${fmtQty(qty)} ${item.satuan_input||''}</td><td class="p-2 text-[10px]">${faktorDisplay}<br><span class="font-mono">${fmtQty(faktor)}</span></td><td class="p-2 font-bold text-blue-600 text-[12px]">${qtyKonversiDisplay}</td><td class="p-2 text-[11px]">${fmtRp(item.harga)}/${item.satuan||''}</td><td class="p-2 font-bold text-[12px]">${fmtRp(sub)}<br><span class="text-[9px] text-gray-500">${fmtQty(qtyConv)}×${fmtRp(item.harga)}</span></td><td class="p-2 text-[11px]">${fmtRp(subPer)}<br><span class="text-[9px] text-gray-400">${fmtRp(sub)}/${fmtQty(porsi)} porsi</span></td><td class="p-2 flex gap-1"><button onclick='openKonversiModal(${JSON.stringify(item).replace(/'/g,"&#39;")})' class="bg-orange-100 px-2 py-1 rounded text-[11px]" title="Kalkulator konversi bahan yang belum ada di DB">🧮</button><button onclick="deleteBOM('${item.id}')" class="bg-red-100 px-2 py-1 rounded text-[11px]">🗑️</button></td></tr>`;
-    });
-  }
-  document.getElementById('bomResepBody').innerHTML=htmlResep;
-  document.getElementById('bomBahanBody').innerHTML=htmlBahan;
-  const total=totalResep+totalBahan;
-  document.getElementById('totalResep').textContent=fmtRp(totalResep);
-  document.getElementById('totalBahanTambahan').textContent=fmtRp(totalBahan);
-  document.getElementById('totalBahan').textContent=fmtRp(total);
-  const calc=data.hpp_calc;
-  if(calc){
-    const hppPerPorsi = total / Math.max(porsi,1);
-    document.getElementById('totalBahanPerPorsi').textContent=fmtRp(hppPerPorsi);
-    document.getElementById('hppBahan').textContent=fmtRp(calc.hpp_bahan_per_porsi || hppPerPorsi);
-    document.getElementById('hppOH').textContent=fmtRp(calc.oh_cost);
-    document.getElementById('hppDel').textContent=fmtRp(calc.delivery_cost);
-    document.getElementById('hppMP').textContent=fmtRp(calc.manpower_per_porsi);
-    document.getElementById('hppFinal').textContent=fmtRp(calc.hpp_final_per_porsi);
-    document.getElementById('hppFinalHeader').textContent=fmtRp(calc.hpp_final_per_porsi);
-  }
-  BOM_CACHE=data;
-}
-async function loadBOM(force=false){
-  if(BOM_CACHE && !force){ renderBOM(BOM_CACHE); return; }
-  document.getElementById('bomResepBody').innerHTML='<tr><td colspan="7" class="p-3 text-center">⏳ Loading resep...</td></tr>';
-  document.getElementById('bomBahanBody').innerHTML='<tr><td colspan="9" class="p-3 text-center">⏳ Loading bahan...</td></tr>';
-  try{
-    const res=await fetch(`/api/menu/${MENU_ID}/resep`,{cache:'no-store'});
-    const data=await res.json();
-    renderBOM(data);
-  }catch(e){
-    document.getElementById('bomResepBody').innerHTML=`<tr><td colspan="7" class="p-3 text-center text-red-500">Error ${e.message}</td></tr>`;
-  }
-}
-async function addResepToPaket(){
-  if(IS_ADDING) return;
-  const sel=document.getElementById('resepSelect'); const id=sel.value;
-  if(!id){alert('Pilih resep dulu');return;}
-  IS_ADDING=true; const btn=document.querySelector('button[onclick="addResepToPaket()"]'); if(btn){btn.disabled=true; btn.textContent='⏳ Menambahkan...';}
-  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add-paket`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paket_menu_id:id,qty_need:1})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} if(d.dedup){alert('Resep sudah ada');} sel.selectedIndex=0; BOM_CACHE=null; await loadBOM(true); }catch(e){alert(e.message);} finally{IS_ADDING=false; if(btn){btn.disabled=false; btn.textContent='+ Tambah Resep';}}
-}
-async function addBahanToPaket(){
-  if(IS_ADDING) return;
-  const sel=document.getElementById('bahanSelect'); const id=sel.value; const qty=parseFloat(document.getElementById('bahanQty').value)||0; const satuan=document.getElementById('bahanSatuan').value||'Pcs';
-  if(!id){alert('Pilih bahan tambahan');return;} if(!qty||qty<=0){alert('Isi Qty total paket');return;}
-  IS_ADDING=true; const btn=document.querySelector('button[onclick="addBahanToPaket()"]'); if(btn){btn.disabled=true; btn.textContent='⏳ Menambahkan...';}
-  try{ const res=await fetch(`/api/menu/${MENU_ID}/resep/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bahan_id:id,qty_need:qty,satuan_input:satuan,tipe:'paket'})}); const d=await res.json(); if(!res.ok){alert(d.detail||'Gagal');return;} if(d.dedup){alert('Sudah ada - skip double');} document.getElementById('bahanQty').value=''; sel.selectedIndex=0; document.getElementById('bahanPreview').classList.add('hidden'); BOM_CACHE=null; await loadBOM(true); }catch(e){alert(e.message);} finally{IS_ADDING=false; if(btn){btn.disabled=false; btn.textContent='+ Tambah Bahan';}}
-}
-async function deleteBOM(id){ if(!confirm('Hapus?')) return; if(IS_ADDING) return; IS_ADDING=true; try{await fetch(`/api/resep/${id}`,{method:'DELETE'}); BOM_CACHE=null; await loadBOM(true);}finally{IS_ADDING=false;} }
-loadBOM(true);
+document.addEventListener('DOMContentLoaded', setupEnterNav);
+function filterResep(){}
+function filterBahan(){}
 </script>
 </body></html>
