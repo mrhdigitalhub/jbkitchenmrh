@@ -588,74 +588,115 @@ async def paket_bom(menu_id: str, request: Request):
 
 # === API BAHAN SAVE JSON - untuk inventory_stock.html tombol Save ===
 
+
 @app.post("/api/bahan/save")
 async def api_bahan_save(request: Request):
     if not supabase: raise HTTPException(500,"No supabase")
     try:
         data = await request.json()
     except:
-        form = await request.form()
-        data = dict(form)
+        try:
+            form = await request.form()
+            data = dict(form)
+        except:
+            data = {}
     try:
-        stock_qty = safe_float(data.get("stock_qty"), 0)
-        if data.get("stock_awal") is not None:
-            stock_qty = safe_float(data.get("stock_awal"),0) + safe_float(data.get("tambah"),0) - safe_float(data.get("terpakai"),0) or stock_qty
+        nama = (data.get("nama_bahan") or "").lower().strip()
+        if not nama:
+            raise HTTPException(400,"Nama bahan wajib")
+        kat = (data.get("kategori_utama") or data.get("kode_kategori_utama") or "nbt").lower().strip()[:3] or "nbt"
+        sub = (data.get("kode_kategori") or data.get("sub_kategori") or "rmp").lower().strip()[:3] or "rmp"
+        # ambil flag hall/orgk
+        flag_raw = (data.get("flag") or data.get("hall") or data.get("kode_bahan") or "")
+        flag = "hall"
+        if isinstance(flag_raw, str) and flag_raw:
+            if "orgk" in flag_raw.lower():
+                flag = "orgk"
+            elif "hall" in flag_raw.lower():
+                flag = "hall"
+        if data.get("fhall"):
+            f = data.get("fhall").lower()
+            if "orgk" in f: flag="orgk"
+            else: flag="hall"
+
+        stock_qty = 0.0
+        try:
+            stock_qty = float(str(data.get("stock_qty") or data.get("fstock") or 0).replace(",","."))
+        except: stock_qty=0
+
+        harga = 0.0
+        try:
+            harga = float(str(data.get("harga_per_satuan") or data.get("fharga") or 0).replace(",",".").replace("rp","").strip())
+        except: harga=0
+
+        # hitung next kode
+        base_prefix = f"{flag}-{kat}-{sub}-"
+        try:
+            res = supabase.table("bahan_inventory").select("kode_bahan").ilike("kode_bahan", f"{base_prefix}%").execute()
+            max_num = 0
+            for r in (res.data or []):
+                kb = (r.get("kode_bahan") or "").lower()
+                try:
+                    n = int(kb.split("-")[-1])
+                    if n>max_num: max_num=n
+                except: pass
+            next_num = max_num+1
+        except Exception as e:
+            print(f"hitung max error {e}")
+            next_num = 1
+
+        kode_bahan = (data.get("kode_bahan") or "").lower().strip()
+        # jika kode kosong atau duplicate, pakai next_num
+        if not kode_bahan:
+            kode_bahan = f"{base_prefix}{next_num:03d}"
+        else:
+            # jika kode yang dikirim sudah ada, naikkan
+            try:
+                chk = supabase.table("bahan_inventory").select("id").eq("kode_bahan", kode_bahan).execute()
+                if chk.data:
+                    kode_bahan = f"{base_prefix}{next_num:03d}"
+            except: pass
+
         payload = {
-            "kode_bahan": data.get("kode_bahan"),
-            "nama_bahan": (data.get("nama_bahan") or "").lower(),
-            "kategori_utama": (data.get("kategori_utama") or "").lower(),
-            "kode_kategori": (data.get("kode_kategori") or "").lower(),
+            "id": data.get("id") or str(__import__("uuid").uuid4()),
+            "kode_bahan": kode_bahan,
+            "nama_bahan": nama,
+            "kategori_utama": kat,
+            "kode_kategori": sub,
             "satuan_default": data.get("satuan_default") or data.get("satuan") or "Kg",
             "stock_qty": stock_qty,
-            "harga_per_satuan": safe_float(data.get("harga_per_satuan"),0),
+            "harga_per_satuan": harga,
             "id_halal": data.get("id_halal"),
-            "updated_at": datetime.now().isoformat()
+            "updated_at": __import__("datetime").datetime.now().isoformat()
         }
-        payload = {k:v for k,v in payload.items() if v is not None and v != ""}
+        payload = {k:v for k,v in payload.items() if v is not None and v!=""}
+
         if data.get("id"):
+            # update
             supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
-            return {"ok": True, "id": data.get("id")}
+            return {"ok": True, "id": data.get("id"), "kode_bahan": payload.get("kode_bahan")}
         else:
-            payload["id"] = str(uuid.uuid4())
-            if not payload.get("kode_bahan"):
-                kat = (payload.get("kategori_utama") or "nbt").lower()[:3]
-                sub = (payload.get("kode_kategori") or "rmp").lower()[:3]
-                # cari nomor terakhir untuk kat-sub
-                try:
-                    res = supabase.table("bahan_inventory").select("kode_bahan").ilike("kode_bahan", f"%-{kat}-{sub}-%").execute()
-                    nums = []
-                    for r in (res.data or []):
-                        kb = r.get("kode_bahan","")
-                        try:
-                            num = int(kb.split("-")[-1])
-                            nums.append(num)
-                        except:
-                            pass
-                    next_num = max(nums)+1 if nums else 1
-                except:
-                    next_num = 1
-                payload["kode_bahan"] = f"hall-{kat}-{sub}-{next_num:03d}".lower()
-            # coba insert, kalau duplicate kode_bahan, auto increment lagi
-            for attempt in range(5):
+            # insert dengan retry anti duplicate
+            for attempt in range(10):
                 try:
                     supabase.table("bahan_inventory").insert(payload).execute()
-                    break
+                    return {"ok": True, "id": payload["id"], "kode_bahan": kode_bahan}
                 except Exception as e:
                     err = str(e).lower()
-                    if "duplicate" in err or "kode_bahan" in err or "unique" in err:
-                        try:
-                            cur = int(payload["kode_bahan"].split("-")[-1])
-                            payload["kode_bahan"] = "-".join(payload["kode_bahan"].split("-")[:-1]) + f"-{cur+1:03d}"
-                            continue
-                        except:
-                            payload["kode_bahan"] = payload["kode_bahan"] + f"-{attempt+1}"
-                            continue
+                    if "duplicate" in err or "unique" in err or "kode_bahan" in err:
+                        next_num +=1
+                        kode_bahan = f"{base_prefix}{next_num:03d}"
+                        payload["kode_bahan"]=kode_bahan
+                        payload["id"]=str(__import__("uuid").uuid4())
+                        continue
                     else:
+                        print(f"insert bahan error {e}")
                         raise HTTPException(400, str(e))
-            return {"ok": True, "id": payload["id"], "kode_bahan": payload["kode_bahan"]}
+            raise HTTPException(400, "Gagal generate kode unik setelah 10x coba")
     except HTTPException:
         raise
     except Exception as e:
+        import traceback; traceback.print_exc()
         raise HTTPException(500, str(e))
     except Exception as e:
         raise HTTPException(500, str(e))

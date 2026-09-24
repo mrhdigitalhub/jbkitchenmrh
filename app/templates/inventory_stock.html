@@ -82,26 +82,26 @@ const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}}; let allRows=[];
 function sf(v){return parseFloat(v)||0;}
 async function loadKategori(){
   try{ const res=await fetch('/api/kategori/list'); const data=await res.json(); STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[]; }catch(e){ STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'}]; STATE.kategoriSub=[]; }
-  // hitung kodeCache dari tabel bahan yang sudah ada
   try{
     STATE.kodeCache={};
     document.querySelectorAll('.row-bahan').forEach(row=>{
-      const kodeEl=row.querySelector('td:nth-child(2)');
-      let kode=(kodeEl?kodeEl.textContent:'').trim().toLowerCase();
+      let kode='';
+      row.querySelectorAll('td').forEach(td=>{
+        const t=(td.textContent||'').trim().toLowerCase();
+        if(t.match(/^[a-z]+-[a-z]{3}-[a-z]{3}-[0-9]{3}/)){ kode=t; }
+      });
       if(!kode) return;
-      // format hall-raw-tpg-001 atau orgk-nbt-rmp-001
-      const parts=kode.split('-');
-      if(parts.length>=4){
-        const kat=parts[parts.length-3];
-        const sub=parts[parts.length-2];
-        const num=parseInt(parts[parts.length-1])||0;
-        const key=kat+'-'+sub;
-        STATE.kodeCache[key]=Math.max(STATE.kodeCache[key]||0, num);
-      }
+      const p=kode.split('-');
+      const kat=p[p.length-3];
+      const sub=p[p.length-2];
+      const num=parseInt(p[p.length-1])||0;
+      const key=kat+'-'+sub;
+      STATE.kodeCache[key]=Math.max(STATE.kodeCache[key]||0, num);
     });
-  }catch(e){ console.log('kodeCache error', e); }
+  }catch(e){}
   renderKategoriUtama(); renderKelolaLists();
 }
+
 function renderKategoriUtama(){
   const sel=document.getElementById('fkat_utama'); if(!sel) return;
   sel.innerHTML='<option value="">Pilih Utama...</option>'+STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.label} (${k.code})</option>`).join('');
@@ -109,21 +109,26 @@ function renderKategoriUtama(){
   filterSubKategori();
 }
 function filterSubKategori(){
-  const utama=document.getElementById('fkat_utama')?.value; const subSel=document.getElementById('fkode_kat'); if(!subSel) return;
+  const utama=document.getElementById('fkat_utama')?.value;
+  const subSel=document.getElementById('fkode_kat');
+  if(!subSel) return;
   if(!utama){ subSel.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
   const filtered=STATE.kategoriSub.filter(s=>s.parent===utama || s.parent_code===utama);
   subSel.innerHTML='<option value="">-- Pilih Sub --</option>'+filtered.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
   genKode();
 }
 function genKode(){
-  const flag=(document.getElementById('fhall')?.value||'Orgk'); const kat=document.getElementById('fkat_utama')?.value||'nbt'; const sub=document.getElementById('fkode_kat')?.value||'rmp';
-  const kode=`${flag}-${kat}-${sub}-${String((STATE.kodeCache[kat+'-'+sub]||0)+1).padStart(3,'0')}`.toLowerCase();
-  const inp=document.getElementById('fkode_auto'); if(inp) inp.value=kode;
+  const flag=(document.getElementById('fhall')?.value||'Hall');
+  const kat=document.getElementById('fkat_utama')?.value||'nbt';
+  const sub=document.getElementById('fkode_kat')?.value||'rmp';
+  if(!kat || !sub) return;
+  const key=kat+'-'+sub;
+  const next=(STATE.kodeCache[key]||0)+1;
+  const kode=`${flag}-${kat}-${sub}-${String(next).padStart(3,'0')}`.toLowerCase();
+  const inp=document.getElementById('fkode_auto');
+  if(inp) inp.value=kode;
 }
-function renderKelolaLists(){
-  const utamaDiv=document.getElementById('listUtama'); if(utamaDiv) utamaDiv.innerHTML=STATE.kategoriUtama.map(u=>`<div class="flex justify-between border-b py-1"><span>${u.code} - ${u.label}</span><button onclick="deleteUtama('${u.code}')" class="text-red-500 text-[12px]">X</button></div>`).join('');
-  const subDiv=document.getElementById('listSub'); if(subDiv) subDiv.innerHTML=STATE.kategoriSub.map(s=>`<div class="flex justify-between border-b py-1"><span>${s.code} - ${s.label} (${s.parent||s.parent_code})</span><button onclick="deleteSub('${s.code}')" class="text-red-500 text-[12px]">X</button></div>`).join('');
-}
+
 async function saveUtama(){
   const code=document.getElementById('newUtamaCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newUtamaLabel')?.value?.trim();
   if(!code||code.length!=3||!label){alert('Code 3 huruf & label wajib');return;}
@@ -164,6 +169,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   allRows=Array.from(document.querySelectorAll('.row-bahan'));
   loadKategori(); initSearch();
   document.getElementById('fkat_utama')?.addEventListener('change', filterSubKategori);
+  document.getElementById('fhall')?.addEventListener('change', genKode);
+  document.getElementById('fkode_kat')?.addEventListener('change', genKode);
   document.getElementById('fkode_kat')?.addEventListener('change', genKode);
   document.getElementById('fhall')?.addEventListener('change', genKode);
   document.getElementById('btnAdd')?.addEventListener('click', openModal);
