@@ -6,6 +6,7 @@ import os, re, uuid, io, json
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict
+from api_kategori import router as kategori_router
 
 from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -26,6 +27,7 @@ except Exception as e:
     print(f"[WARN] Supabase init fail: {e}")
 
 app = FastAPI(title="JB KITCHEN MRH - FINAL + DETAIL NO EDIT")
+app.include_router (kategori_router)
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent if BASE_DIR.name == "app" else BASE_DIR
