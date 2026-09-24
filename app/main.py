@@ -549,30 +549,26 @@ async def save_kategori_utama(request: Request):
     label = str(data.get("label","")).strip()
     if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
     if not label: raise HTTPException(400,"Label wajib")
-    # coba 2 tabel dengan logic insert-or-update (tanpa on_conflict)
+    last_err = ""
     for tbl in ["kategori_bahan", "kategori_master"]:
         try:
-            # cek exist
-            chk = supabase.table(tbl).select("id,code").eq("code", code).execute()
+            chk = supabase.table(tbl).select("code").eq("code", code).execute()
             if chk.data:
                 supabase.table(tbl).update({"label": label, "type": "utama"}).eq("code", code).execute()
             else:
+                # coba insert minimal - hanya kolom yang pasti ada
                 try:
                     supabase.table(tbl).insert({"code": code, "label": label, "type": "utama"}).execute()
-                except:
-                    # fallback jika butuh id
+                except Exception as e1:
+                    last_err = str(e1)
+                    # fallback dengan id
                     supabase.table(tbl).insert({"id": str(uuid.uuid4()), "code": code, "label": label, "type": "utama"}).execute()
-            return {"ok": True, "table": tbl}
+            return {"ok": True, "table": tbl, "code": code}
         except Exception as e:
-            print(f"[save utama {tbl}] {e}")
+            last_err = str(e)
+            print(f"[save utama {tbl}] {last_err}")
             continue
-    raise HTTPException(500, "Gagal save kategori utama - cek RLS di Supabase. Aktifkan policy INSERT untuk anon atau gunakan service_role key")
-
-@app.post("/api/kategori/sub/save")
-async def save_kategori_sub(request: Request):
-    if not supabase: raise HTTPException(500,"No supabase")
-    data = await request.json()
-    code = str(data.get("code","")).lower().strip()
+    raise HTTPException(500, f"Gagal save utama {code}: {last_err}. Cek RLS - jalankan: CREATE POLICY allow_all ON kategori_bahan FOR ALL USING (true) WITH CHECK (true)").lower().strip()
     label = str(data.get("label","")).strip()
     parent = str(data.get("parent_code") or data.get("parent") or "").lower().strip()
     if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
