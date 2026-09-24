@@ -82,6 +82,24 @@ const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}}; let allRows=[];
 function sf(v){return parseFloat(v)||0;}
 async function loadKategori(){
   try{ const res=await fetch('/api/kategori/list'); const data=await res.json(); STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[]; }catch(e){ STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'}]; STATE.kategoriSub=[]; }
+  // hitung kodeCache dari tabel bahan yang sudah ada
+  try{
+    STATE.kodeCache={};
+    document.querySelectorAll('.row-bahan').forEach(row=>{
+      const kodeEl=row.querySelector('td:nth-child(2)');
+      let kode=(kodeEl?kodeEl.textContent:'').trim().toLowerCase();
+      if(!kode) return;
+      // format hall-raw-tpg-001 atau orgk-nbt-rmp-001
+      const parts=kode.split('-');
+      if(parts.length>=4){
+        const kat=parts[parts.length-3];
+        const sub=parts[parts.length-2];
+        const num=parseInt(parts[parts.length-1])||0;
+        const key=kat+'-'+sub;
+        STATE.kodeCache[key]=Math.max(STATE.kodeCache[key]||0, num);
+      }
+    });
+  }catch(e){ console.log('kodeCache error', e); }
   renderKategoriUtama(); renderKelolaLists();
 }
 function renderKategoriUtama(){
@@ -109,7 +127,8 @@ function renderKelolaLists(){
 async function saveUtama(){
   const code=document.getElementById('newUtamaCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newUtamaLabel')?.value?.trim();
   if(!code||code.length!=3||!label){alert('Code 3 huruf & label wajib');return;}
-  try{ const res=await fetch('/api/kategori/utama/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label})}); const txt=await res.text(); if(res.ok){document.getElementById('newUtamaCode').value='';document.getElementById('newUtamaLabel').value=''; await loadKategori(); console.log('saved utama',txt);} else {console.error('save utama failed',txt); alert('Gagal save '+code+': '+txt);} }catch(e){console.error(e); alert('Error: '+e.message);} 
+  const res=await fetch('/api/kategori/utama/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label})});
+  if(res.ok){document.getElementById('newUtamaCode').value='';document.getElementById('newUtamaLabel').value='';loadKategori();} else alert(await res.text());
 }
 async function deleteUtama(code){
   if(!confirm('Hapus utama '+code+' ? Jika masih dipakai bahan, akan ditolak.')) return;
@@ -117,9 +136,10 @@ async function deleteUtama(code){
   if(res.ok){ loadKategori(); } else { const txt=await res.text(); alert(txt); }
 }
 async function saveSub(){
-  const code=document.getElementById('newSubCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newSubLabel')?.value?.trim(); const parent=document.getElementById('newSubParent')?.value?.trim();
-  if(!code||code.length!=3||!label||!parent){alert('Code, label, parent wajib');return;}
-  try{ const res=await fetch('/api/kategori/sub/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label,parent_code:parent})}); const txt=await res.text(); if(res.ok){document.getElementById('newSubCode').value='';document.getElementById('newSubLabel').value=''; await loadKategori(); console.log('saved sub',txt);} else {console.error('save sub failed',txt); alert('Gagal save '+code+': '+txt);} }catch(e){console.error(e); alert('Error: '+e.message);} 
+  const code=document.getElementById('newSubCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newSubLabel')?.value?.trim(); const parent=document.getElementById('newSubParent')?.value;
+  if(!code||code.length!=3||!label||!parent){alert('Lengkapi');return;}
+  const res=await fetch('/api/kategori/sub/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label,parent_code:parent})});
+  if(res.ok){document.getElementById('newSubCode').value='';document.getElementById('newSubLabel').value='';loadKategori();} else alert(await res.text());
 }
 async function deleteSub(code){
   if(!confirm('Hapus sub '+code+' ? Jika masih dipakai bahan, akan ditolak.')) return;
