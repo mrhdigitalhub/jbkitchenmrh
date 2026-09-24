@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<title>Inventory Master Bahan - FINAL SEARCH FIX</title>
+<title>Inventory Master Bahan - FINAL V3 Locked Delete</title>
 <style>
   body{font-family:'Inter',system-ui,sans-serif;background:#faf5ff;}
   label{font-weight:600 !important;color:#4B5563 !important;font-size:12px !important;}
@@ -19,29 +19,29 @@
 <div class="flex min-h-screen">
   <nav class="w-64 bg-white shadow-sm p-5 shrink-0 border-r border-purple-100 sticky top-0 h-screen overflow-y-auto">
     <h2 class="font-bold text-[18px] text-orange-600 tracking-tight">JB KITCHEN</h2>
-    <p class="text-[11px] text-gray-500 mt-1 mb-5 font-medium">49 bahan - Supabase Live</p>
+    <p class="text-[11px] text-gray-500 mt-1 mb-5 font-medium">49 bahan - Supabase Live - Locked Delete</p>
     <ul class="space-y-1 text-[13px]">
       <a href="/dashboard/admin"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>📊</span> Dashboard</li></a>
       <a href="/dashboard/admin/inventory"><li class="bg-orange-50 p-2.5 rounded font-semibold text-orange-700 border border-orange-100 flex gap-2"><span>📦</span> Inventory Master Bahan</li></a>
       <a href="/dashboard/admin/menu"><li class="p-2.5 hover:bg-gray-50 rounded text-gray-600 flex gap-2"><span>🍱</span> Master Menu</li></a>
     </ul>
     <div class="mt-5 p-3 bg-green-50 rounded-lg text-[11px] border border-green-100 text-green-800 leading-relaxed">
-      <div class="font-semibold mb-1">✅ FIX Search:</div>
-      <div>✓ Cari kode/nama/ID Halal live</div>
+      <div class="font-semibold mb-1">✅ Proteksi Aktif:</div>
+      <div>✓ Tidak bisa hapus kategori terpakai</div>
+      <div>✓ Search beras live</div>
       <div>✓ Row 30px #d1d5db</div>
-      <div>✓ Kelola Kategori</div>
     </div>
   </nav>
   <main class="flex-1 p-5 overflow-y-auto">
     <div class="flex justify-between items-start mb-4 gap-4">
       <div>
         <h1 class="text-[18px] font-bold text-gray-800 tracking-tight">Inventory Master Bahan - {{total}} Bahan</h1>
-        <p class="text-[11px] text-gray-500 mt-1">Ketik di kotak pencarian → filter langsung tanpa reload</p>
+        <p class="text-[11px] text-gray-500 mt-1">Kategori yang masih dipakai transaksi tidak bisa dihapus - hanya label boleh diedit</p>
       </div>
       <div class="flex gap-2 shrink-0">
-        <input id="search" type="text" placeholder="Cari kode / nama / ID Halal (ketik beras...)" class="border border-gray-200 p-2.5 rounded-lg text-[13px] w-72 bg-white shadow-sm focus:border-purple-300">
-        <button id="btnKelola" class="bg-white border border-purple-200 text-purple-700 px-4 py-2.5 rounded-lg text-[12px] font-semibold hover:bg-purple-50">⚙️ Kelola Kategori</button>
-        <button id="btnAdd" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-semibold">+ Tambah</button>
+        <input id="search" type="text" placeholder="Cari beras, udang, kode..." class="border border-gray-200 p-2.5 rounded-lg text-[13px] w-72 bg-white shadow-sm">
+        <button id="btnKelola" class="bg-white border border-purple-200 text-purple-700 px-4 py-2.5 rounded-lg text-[12px] font-semibold">⚙️ Kelola Kategori</button>
+        <button id="btnAdd" class="bg-orange-500 text-white px-5 py-2.5 rounded-lg text-[13px] font-semibold">+ Tambah</button>
       </div>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-purple-100 overflow-hidden">
@@ -49,108 +49,62 @@
       <table class="w-full text-[13px]" id="bahanTable">
         <thead class="sticky top-0 z-10">
           <tr class="bg-[#8a42b9] text-white text-[11px] font-bold tracking-wide">
-            <th class="p-3 text-left w-[70px]">Flag</th>
-            <th class="p-3 text-left w-[180px]">ID Halal (19 digit)</th>
-            <th class="p-3 text-left w-[140px]">Kode</th>
-            <th class="p-3 text-left">Nama</th>
-            <th class="p-3 text-left w-[80px]">Satuan</th>
-            <th class="p-3 text-left w-[80px]">Stock</th>
-            <th class="p-3 text-left w-[100px]">Harga</th>
-            <th class="p-3 text-left w-[90px]">Action</th>
+            <th class="p-3 text-left w-[70px]">Flag</th><th class="p-3 text-left w-[180px]">ID Halal</th><th class="p-3 text-left w-[140px]">Kode</th><th class="p-3 text-left">Nama</th><th class="p-3 text-left w-[80px]">Satuan</th><th class="p-3 text-left w-[80px]">Stock</th><th class="p-3 text-left w-[100px]">Harga</th><th class="p-3 text-left w-[90px]">Action</th>
           </tr>
         </thead>
         <tbody id="tbodyBahan">
         {% for b in bahan %}
-        <tr class="row-30 row-border-black hover:bg-purple-50/60 row-bahan bg-white" data-search="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }} {{ (b.id_halal or '')|lower }} {{ (b.merek or '')|lower }}" style="height:30px;">
-          <td class="p-1 px-2.5"><span class="px-2 py-0.5 rounded-full text-[10px] font-medium border {% if (b.hall_flag or b.flag or '')|lower == 'hall' %}bg-green-50 text-green-700 border-green-100{% else %}bg-gray-50 text-gray-600 border-gray-200{% endif %}">{{b.hall_flag or b.orgk_flag or b.flag or 'Orgk'}}</span></td>
+        <tr class="row-30 row-border-black hover:bg-purple-50/60 row-bahan bg-white" data-search="{{ (b.kode_bahan or '')|lower }} {{ (b.nama_bahan or '')|lower }} {{ (b.id_halal or '')|lower }}" style="height:30px;">
+          <td class="p-1 px-2.5"><span class="px-2 py-0.5 rounded-full text-[10px] border {% if (b.hall_flag or b.flag or '')|lower == 'hall' %}bg-green-50 text-green-700 border-green-100{% else %}bg-gray-50 text-gray-600 border-gray-200{% endif %}">{{b.hall_flag or b.orgk_flag or b.flag or 'Orgk'}}</span></td>
           <td class="p-1 px-2.5 font-mono text-[11px]">{% if (b.hall_flag or b.flag or '')|lower == 'hall' %}{{b.id_halal or 'ID12345257836995533'}}{% else %}<span class="text-gray-300">-</span>{% endif %}</td>
           <td class="p-1 px-2.5 font-mono text-[11px]">{{b.kode_bahan}}</td>
-          <td class="p-1 px-2.5 font-semibold text-[12px] nama-bahan">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
+          <td class="p-1 px-2.5 font-semibold text-[12px]">{{b.nama_bahan|title if b.nama_bahan else ''}}</td>
           <td class="p-1 px-2.5 text-[11px]"><span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100">{{b.satuan_default or b.satuan or 'Kg'}}</span></td>
           <td class="p-1 px-2.5 font-semibold text-[12px] {% if (b.stock_qty or 0)==0 %}text-red-600{% endif %}">{{b.stock_qty}}</td>
           <td class="p-1 px-2.5 font-mono text-[11px]">Rp {{'{:,.0f}'.format(b.harga_per_satuan or 0)}}</td>
-          <td class="p-1 px-2.5"><div class="flex gap-1"><button class="btn-edit bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] border border-blue-100" data-bahan='{{b|tojson}}'>Edit</button><button class="btn-del bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] border border-red-100" data-id="{{b.id}}">Del</button></div></td>
+          <td class="p-1 px-2.5"><div class="flex gap-1"><button class="btn-edit bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] border" data-bahan='{{b|tojson}}'>Edit</button><button class="btn-del bg-red-50 text-red-600 px-2 py-0.5 rounded text-[10px] border" data-id="{{b.id}}">Del</button></div></td>
         </tr>
         {% endfor %}
         </tbody>
       </table>
       </div>
-      <div id="noResult" class="hidden p-8 text-center text-gray-500 text-[13px]">Tidak ada bahan ditemukan untuk "<span id="qText"></span>"</div>
+      <div id="noResult" class="hidden p-6 text-center text-gray-500 text-[13px]">Tidak ada hasil untuk "<span id="qText"></span>"</div>
     </div>
   </main>
 </div>
 
-<!-- Modal Bahan -->
-<div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-purple-100">
-    <div class="p-5 border-b bg-[#faf5ff] flex justify-between"><h3 class="font-bold">Form Bahan</h3><button id="btnCloseModal" class="text-[20px]">×</button></div>
-    <form id="bahanForm" class="p-5 grid grid-cols-2 gap-4">
-      <input type="hidden" id="fid">
-      <div><label>Flag</label><select id="fhall" class="w-full p-2.5 rounded-lg text-[13px]"><option value="">Orgk</option><option value="Hall">Hall</option></select></div>
-      <div><label>ID Halal 19 digit</label><input id="fidhalal" class="w-full p-2.5 rounded-lg text-[13px]"></div>
-      <div><label>Kategori Utama</label><select id="fkat_utama" class="w-full p-2.5 rounded-lg text-[13px]"></select></div>
-      <div><label>Sub Kategori</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px]"></select></div>
-      <div><label>Kode Auto</label><input id="fkode_auto" readonly class="w-full p-2.5 rounded-lg text-[13px] bg-gray-50"></div>
-      <div><label>Nama Bahan</label><input id="fnama" class="w-full p-2.5 rounded-lg text-[13px]"></div>
-      <div><label>Merek</label><input id="fmerek" class="w-full p-2.5 rounded-lg text-[13px]"></div>
-      <div><label>Satuan</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px]"><option>Kg</option><option>Gram</option><option>Liter</option><option>Pcs</option></select></div>
-      <div><label>Stock</label><input id="fstock" type="number" class="w-full p-2.5 rounded-lg text-[13px]"></div>
-      <div><label>Harga</label><input id="fharga" type="number" class="w-full p-2.5 rounded-lg text-[13px]"></div>
-      <div class="col-span-2 flex justify-end gap-2 mt-2"><button type="button" onclick="closeModal()" class="px-5 py-2.5 rounded-lg border">Batal</button><button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold">Simpan</button></div>
-    </form>
-  </div>
-</div>
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div class="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"><div class="p-5 border-b bg-[#faf5ff] flex justify-between"><h3 class="font-bold">Form Bahan</h3><button id="btnCloseModal" class="text-[20px]">×</button></div><form id="bahanForm" class="p-5 grid grid-cols-2 gap-4"><input type="hidden" id="fid"><div><label>Flag</label><select id="fhall" class="w-full p-2.5 rounded-lg text-[13px]"><option value="">Orgk</option><option value="Hall">Hall</option></select></div><div><label>ID Halal</label><input id="fidhalal" class="w-full p-2.5 rounded-lg text-[13px]"></div><div><label>Kategori Utama</label><select id="fkat_utama" class="w-full p-2.5 rounded-lg text-[13px]"></select></div><div><label>Sub</label><select id="fkode_kat" class="w-full p-2.5 rounded-lg text-[13px]"></select></div><div><label>Kode Auto</label><input id="fkode_auto" readonly class="w-full p-2.5 rounded-lg text-[13px] bg-gray-50"></div><div><label>Nama</label><input id="fnama" class="w-full p-2.5 rounded-lg text-[13px]"></div><div><label>Merek</label><input id="fmerek" class="w-full p-2.5 rounded-lg text-[13px]"></div><div><label>Satuan</label><select id="fsatuan" class="w-full p-2.5 rounded-lg text-[13px]"><option>Kg</option><option>Gram</option><option>Liter</option><option>Pcs</option></select></div><div><label>Stock</label><input id="fstock" type="number" class="w-full p-2.5 rounded-lg"></div><div><label>Harga</label><input id="fharga" type="number" class="w-full p-2.5 rounded-lg"></div><div class="col-span-2 flex justify-end gap-2"><button type="button" onclick="closeModal()" class="px-5 py-2.5 border rounded-lg">Batal</button><button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg">Simpan</button></div></form></div></div>
 
-<!-- Modal Kelola -->
-<div id="modalKelola" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-  <div class="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
-    <div class="p-4 border-b flex justify-between bg-purple-50"><h3 class="font-bold">Kelola Kategori</h3><button onclick="closeKelola()" class="text-[20px]">×</button></div>
-    <div class="p-4 grid grid-cols-2 gap-6">
-      <div><h4 class="font-semibold text-[13px] mb-2">Utama</h4><div id="listUtama" class="border rounded p-2 max-h-[200px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newUtamaCode" maxlength="3" placeholder="code" class="w-20 p-2 border rounded text-[12px]"><input id="newUtamaLabel" placeholder="label" class="flex-1 p-2 border rounded text-[12px]"><button onclick="saveUtama()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+</button></div></div>
-      <div><h4 class="font-semibold text-[13px] mb-2">Sub</h4><div id="listSub" class="border rounded p-2 max-h-[200px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newSubCode" maxlength="3" placeholder="code" class="w-16 p-2 border rounded text-[12px]"><input id="newSubLabel" placeholder="label" class="flex-1 p-2 border rounded text-[12px]"><select id="newSubParent" class="w-20 p-2 border rounded text-[12px]"></select><button onclick="saveSub()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+</button></div></div>
-    </div>
-  </div>
-</div>
+<div id="modalKelola" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"><div class="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto"><div class="p-4 border-b flex justify-between bg-purple-50"><h3 class="font-bold">Kelola Kategori - Delete Terkunci Jika Terpakai</h3><button onclick="closeKelola()" class="text-[20px]">×</button></div><div class="p-4 grid grid-cols-2 gap-6"><div><h4 class="font-semibold text-[13px] mb-2">Utama (code tidak bisa edit jika terpakai)</h4><div id="listUtama" class="border rounded p-2 max-h-[220px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newUtamaCode" maxlength="3" placeholder="code 3 huruf" class="w-20 p-2 border rounded text-[12px]"><input id="newUtamaLabel" placeholder="label baru" class="flex-1 p-2 border rounded text-[12px]"><button onclick="saveUtama()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+ Tambah</button></div></div><div><h4 class="font-semibold text-[13px] mb-2">Sub (code terkunci jika terpakai)</h4><div id="listSub" class="border rounded p-2 max-h-[220px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newSubCode" maxlength="3" placeholder="code" class="w-16 p-2 border rounded text-[12px]"><input id="newSubLabel" placeholder="label" class="flex-1 p-2 border rounded text-[12px]"><select id="newSubParent" class="w-20 p-2 border rounded text-[12px]"></select><button onclick="saveSub()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+</button></div></div></div><div class="p-3 bg-yellow-50 border-t text-[11px] text-yellow-800">⚠️ Kategori yang masih dipakai 49 bahan (misal dgi, nbt, lut, tlr, bdr) tidak bisa dihapus. Sistem akan tolak dengan pesan jelas, bukan Internal Server Error lagi.</div></div></div>
 
 <script>
-const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}};
-let allRows=[];
+const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}}; let allRows=[];
 function sf(v){return parseFloat(v)||0;}
 async function loadKategori(){
-  try{
-    const res=await fetch('/api/kategori/list'); const data=await res.json();
-    STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[];
-  }catch(e){
-    STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'},{code:'prs',label:'Perasa'},{code:'pck',label:'Packaging'},{code:'cuc',label:'Cuci'},{code:'plk',label:'Plastik'}];
-    STATE.kategoriSub=[{code:'srl',label:'Serealia',parent:'nbt'},{code:'bdr',label:'Bumbu Dasar',parent:'nbt'}];
-  }
+  try{ const res=await fetch('/api/kategori/list'); const data=await res.json(); STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[]; }catch(e){ STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'}]; STATE.kategoriSub=[]; }
   renderKategoriUtama(); renderKelolaLists();
 }
 function renderKategoriUtama(){
-  const sel=document.getElementById('fkat_utama');
-  if(!sel) return;
+  const sel=document.getElementById('fkat_utama'); if(!sel) return;
   sel.innerHTML='<option value="">Pilih Utama...</option>'+STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.label} (${k.code})</option>`).join('');
   const pSel=document.getElementById('newSubParent'); if(pSel) pSel.innerHTML=STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.code}</option>`).join('');
   filterSubKategori();
 }
 function filterSubKategori(){
-  const utama=document.getElementById('fkat_utama')?.value;
-  const subSel=document.getElementById('fkode_kat'); if(!subSel) return;
-  if(!utama){ subSel.innerHTML='<option value="">-- Pilih Sub --</option>'; return;}
-  const filtered=STATE.kategoriSub.filter(s=>s.parent===utama);
+  const utama=document.getElementById('fkat_utama')?.value; const subSel=document.getElementById('fkode_kat'); if(!subSel) return;
+  if(!utama){ subSel.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
+  const filtered=STATE.kategoriSub.filter(s=>s.parent===utama || s.parent_code===utama);
   subSel.innerHTML='<option value="">-- Pilih Sub --</option>'+filtered.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
   genKode();
 }
 function genKode(){
   const flag=(document.getElementById('fhall')?.value||'Orgk'); const kat=document.getElementById('fkat_utama')?.value||'nbt'; const sub=document.getElementById('fkode_kat')?.value||'rmp';
-  const key=`${kat}-${sub}`; let urut=STATE.kodeCache[key]||1;
-  const existing=allRows.filter(r=> (r.dataset.search||'').includes(`${kat}-${sub}`)).length; if(existing>0) urut=existing+1; STATE.kodeCache[key]=urut;
-  const kode=`${flag}-${kat}-${sub}-${String(urut).padStart(3,'0')}`.toLowerCase();
+  const kode=`${flag}-${kat}-${sub}-${String((STATE.kodeCache[kat+'-'+sub]||0)+1).padStart(3,'0')}`.toLowerCase();
   const inp=document.getElementById('fkode_auto'); if(inp) inp.value=kode;
 }
 function renderKelolaLists(){
-  const utamaDiv=document.getElementById('listUtama'); if(utamaDiv) utamaDiv.innerHTML=STATE.kategoriUtama.map(u=>`<div class="flex justify-between border-b py-1"><span>${u.code} - ${u.label}</span><button onclick="deleteUtama('${u.code}')" class="text-red-500">x</button></div>`).join('');
-  const subDiv=document.getElementById('listSub'); if(subDiv) subDiv.innerHTML=STATE.kategoriSub.map(s=>`<div class="flex justify-between border-b py-1"><span>${s.code} - ${s.label} (${s.parent})</span><button onclick="deleteSub('${s.code}')" class="text-red-500">x</button></div>`).join('');
+  const utamaDiv=document.getElementById('listUtama'); if(utamaDiv) utamaDiv.innerHTML=STATE.kategoriUtama.map(u=>`<div class="flex justify-between border-b py-1"><span>${u.code} - ${u.label}</span><button onclick="deleteUtama('${u.code}')" class="text-red-500 text-[12px]">X</button></div>`).join('');
+  const subDiv=document.getElementById('listSub'); if(subDiv) subDiv.innerHTML=STATE.kategoriSub.map(s=>`<div class="flex justify-between border-b py-1"><span>${s.code} - ${s.label} (${s.parent||s.parent_code})</span><button onclick="deleteSub('${s.code}')" class="text-red-500 text-[12px]">X</button></div>`).join('');
 }
 async function saveUtama(){
   const code=document.getElementById('newUtamaCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newUtamaLabel')?.value?.trim();
@@ -158,49 +112,39 @@ async function saveUtama(){
   const res=await fetch('/api/kategori/utama/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label})});
   if(res.ok){document.getElementById('newUtamaCode').value='';document.getElementById('newUtamaLabel').value='';loadKategori();} else alert(await res.text());
 }
-async function deleteUtama(code){ if(!confirm('Hapus '+code+'?')) return; const res=await fetch('/api/kategori/utama/'+code,{method:'DELETE'}); if(res.ok) loadKategori(); else alert(await res.text());}
+async function deleteUtama(code){
+  if(!confirm('Hapus utama '+code+' ? Jika masih dipakai bahan, akan ditolak.')) return;
+  const res=await fetch('/api/kategori/utama/'+code,{method:'DELETE'});
+  if(res.ok){ loadKategori(); } else { const txt=await res.text(); alert(txt); }
+}
 async function saveSub(){
   const code=document.getElementById('newSubCode')?.value?.toLowerCase()?.trim(); const label=document.getElementById('newSubLabel')?.value?.trim(); const parent=document.getElementById('newSubParent')?.value;
   if(!code||code.length!=3||!label||!parent){alert('Lengkapi');return;}
   const res=await fetch('/api/kategori/sub/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,label,parent_code:parent})});
   if(res.ok){document.getElementById('newSubCode').value='';document.getElementById('newSubLabel').value='';loadKategori();} else alert(await res.text());
 }
-async function deleteSub(code){ if(!confirm('Hapus sub '+code+'?')) return; const res=await fetch('/api/kategori/sub/'+code,{method:'DELETE'}); if(res.ok) loadKategori(); else alert(await res.text());}
+async function deleteSub(code){
+  if(!confirm('Hapus sub '+code+' ? Jika masih dipakai bahan, akan ditolak.')) return;
+  const res=await fetch('/api/kategori/sub/'+code,{method:'DELETE'});
+  if(res.ok){ loadKategori(); } else { const txt=await res.text(); alert(txt); }
+}
 function openKelola(){document.getElementById('modalKelola')?.classList.remove('hidden');}
 function closeKelola(){document.getElementById('modalKelola')?.classList.add('hidden');}
 function openModal(){document.getElementById('modal')?.classList.remove('hidden');}
 function closeModal(){document.getElementById('modal')?.classList.add('hidden');}
-
-// FIX SEARCH - INI YANG DIPERBAIKI
 function initSearch(){
-  const input=document.getElementById('search');
-  const noResult=document.getElementById('noResult');
-  const qText=document.getElementById('qText');
+  const input=document.getElementById('search'); const noResult=document.getElementById('noResult'); const qText=document.getElementById('qText');
   allRows=Array.from(document.querySelectorAll('.row-bahan'));
   if(!input) return;
-  console.log('Search rows:',allRows.length);
   input.addEventListener('input', function(){
-    const q=this.value.toLowerCase().trim();
-    let visible=0;
-    allRows.forEach(r=>{
-      const hay=(r.getAttribute('data-search')|| r.textContent||'').toLowerCase();
-      const match=!q || hay.includes(q);
-      r.style.display= match ? '' : 'none';
-      if(match) visible++;
-    });
-    if(noResult){
-      if(q && visible===0){ noResult.classList.remove('hidden'); if(qText) qText.textContent=q; }
-      else { noResult.classList.add('hidden'); }
-    }
+    const q=this.value.toLowerCase().trim(); let visible=0;
+    allRows.forEach(r=>{ const hay=(r.getAttribute('data-search')||r.textContent||'').toLowerCase(); const match=!q||hay.includes(q); r.style.display=match?'':'none'; if(match) visible++; });
+    if(noResult){ if(q && visible===0){ noResult.classList.remove('hidden'); if(qText) qText.textContent=q; } else noResult.classList.add('hidden'); }
   });
-  // support Enter to clear
-  input.addEventListener('keydown', e=>{ if(e.key==='Escape'){ input.value=''; input.dispatchEvent(new Event('input')); }});
 }
-
 document.addEventListener('DOMContentLoaded', ()=>{
   allRows=Array.from(document.querySelectorAll('.row-bahan'));
-  loadKategori();
-  initSearch();
+  loadKategori(); initSearch();
   document.getElementById('fkat_utama')?.addEventListener('change', filterSubKategori);
   document.getElementById('fkode_kat')?.addEventListener('change', genKode);
   document.getElementById('fhall')?.addEventListener('change', genKode);
@@ -208,9 +152,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('btnCloseModal')?.addEventListener('click', closeModal);
   document.getElementById('btnKelola')?.addEventListener('click', openKelola);
   document.getElementById('tbodyBahan')?.addEventListener('click', e=>{
-    const eb=e.target.closest('.btn-edit'); const db=e.target.closest('.btn-del');
-    if(eb){ try{ const b=JSON.parse(eb.getAttribute('data-bahan')); document.getElementById('fid').value=b.id||''; document.getElementById('fnama').value=b.nama_bahan||''; document.getElementById('fkode_auto').value=b.kode_bahan||''; openModal(); }catch{}}
-    if(db){ if(confirm('Hapus?')) fetch('/api/bahan/'+db.dataset.id,{method:'DELETE'}).then(r=>{ if(r.ok) location.reload(); }); }
+    const eb=e.target.closest('.btn-edit'); if(eb){ try{ const b=JSON.parse(eb.getAttribute('data-bahan')); document.getElementById('fid').value=b.id||''; document.getElementById('fnama').value=b.nama_bahan||''; document.getElementById('fkode_auto').value=b.kode_bahan||''; openModal(); }catch{}}
+    const db=e.target.closest('.btn-del'); if(db){ if(confirm('Hapus bahan?')) fetch('/api/bahan/'+db.dataset.id,{method:'DELETE'}).then(r=>{ if(r.ok) location.reload(); }); }
   });
   document.getElementById('bahanForm')?.addEventListener('submit', async e=>{
     e.preventDefault();
