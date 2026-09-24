@@ -6,7 +6,8 @@ import os, re, uuid, io, json
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict
-from app.api_kategori import router as kategori_router
+from .api_kategori import router as kategori_router
+
 
 from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
