@@ -1,71 +1,121 @@
 import os
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from supabase import create_client, Client
+from fastapi.templating import Jinja2Templates
 
-# ===== App init =====
-app = FastAPI(title="JB KITCHEN - Inventory")
+app = FastAPI(title="JB KITCHEN")
 
-# ===== Supabase helper =====
-def get_supabase() -> Client:
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    if not url or not key:
-        raise HTTPException(status_code=500, detail="SUPABASE_URL / SUPABASE_KEY belum set di Vercel Env")
-    return create_client(url, key)
-
-# ===== Templates =====
-# Vercel path bisa di app/templates atau templates
+# Templates path - anti crash
 templates_path = os.path.join(os.path.dirname(__file__), "templates")
 if not os.path.exists(templates_path):
     templates_path = "app/templates"
 if not os.path.exists(templates_path):
+    templates_path = os.path.join(os.getcwd(), "app/templates")
+if not os.path.exists(templates_path):
     templates_path = "templates"
-templates = Jinja2Templates(directory=templates_path)
+print(f"[TEMPLATES] using {templates_path}")
 
-# ===== Import kategori router (FIX DELETE) =====
+try:
+    templates = Jinja2Templates(directory=templates_path)
+except Exception as e:
+    print(f"Template init error: {e}")
+    templates = None
+
+# Import kategori router - ANTI CIRCULAR & ANTI CRASH
+kategori_router = None
 try:
     from .api_kategori import router as kategori_router
-except ImportError:
+except Exception as e1:
     try:
         from app.api_kategori import router as kategori_router
-    except ImportError:
-        from api_kategori import router as kategori_router
+    except Exception as e2:
+        try:
+            from api_kategori import router as kategori_router
+        except Exception as e3:
+            print(f"[WARN] kategori_router gagal load: {e1} | {e2} | {e3}")
 
-app.include_router(kategori_router, prefix="/api/kategori", tags=["kategori"])
+if kategori_router is not None:
+    app.include_router(kategori_router, prefix="/api/kategori", tags=["kategori"])
 
-# ===== Routes Inventory =====
+def get_supabase():
+    try:
+        from supabase import create_client
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            return None
+        return create_client(url, key)
+    except Exception as e:
+        print(f"[Supabase] error: {e}")
+        return None
+
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
-    return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": [], "total": 0})
+    # anti 500
+    if templates is None:
+        return HTMLResponse("<h1>JB KITCHEN - Templates not found</h1>", status_code=200)
+    try:
+        sb = get_supabase()
+        bahan = []
+        if sb:
+            try:
+                res = sb.table("bahan").select("*").order("kode_bahan").limit(100).execute()
+                bahan = res.data or []
+            except Exception as e:
+                print(f"bahan fetch error: {e}")
+                bahan = []
+        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan)})
+    except Exception as e:
+        print(f"ROOT error: {e}")
+        return HTMLResponse(f"<pre>Error: {e}</pre><a href='/health'>health</a>", status_code=200)
 
 @app.get("/dashboard/admin/inventory", response_class=HTMLResponse)
 def inventory_page(request: Request):
+    # INI YANG BIKIN INTERNAL SERVER ERROR KEMARIN - sekarang anti crash
+    if templates is None:
+        return HTMLResponse("<h1>JB KITCHEN - Templates folder missing</h1><p>Check app/templates/inventory_stock.html</p>", status_code=200)
+    bahan = []
+    error_msg = None
+    sb = get_supabase()
+    if sb is None:
+        error_msg = "SUPABASE_URL / KEY belum set di Vercel"
+    else:
+        try:
+            res = sb.table("bahan").select("*").order("kode_bahan").execute()
+            bahan = res.data or []
+        except Exception as e:
+            error_msg = str(e)
+            print(f"[inventory] supabase error: {e}")
+            bahan = []
     try:
-        sb = get_supabase()
-        res = sb.table("bahan").select("*").order("kode_bahan").execute()
-        bahan = res.data or []
-        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan)})
+        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan), "error": error_msg})
     except Exception as e:
-        # fallback biar tidak Not Found
-        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": [], "total": 0, "error": str(e)})
+        # JANGAN 500, kembalikan HTML langsung
+        print(f"[TemplateResponse error] {e}")
+        html = f"<html><body><h1>Inventory - fallback</h1><p>Error template: {e}</p><p>Bahan count: {len(bahan)}</p><pre>{error_msg}</pre><a href='/health'>/health</a></body></html>"
+        return HTMLResponse(html, status_code=200)
 
 @app.get("/api/bahan/list")
 def list_bahan():
     sb = get_supabase()
-    data = sb.table("bahan").select("*").order("kode_bahan").execute().data or []
-    return {"bahan": data}
+    if sb is None:
+        return JSONResponse({"bahan": [], "error": "supabase not configured"}, status_code=200)
+    try:
+        data = sb.table("bahan").select("*").order("kode_bahan").execute().data or []
+        return {"bahan": data}
+    except Exception as e:
+        return {"bahan": [], "error": str(e)}
 
 @app.post("/api/bahan/save")
 def save_bahan(payload: dict):
     sb = get_supabase()
+    if sb is None:
+        return JSONResponse({"error": "supabase not configured"}, status_code=200)
     try:
-        # payload dari modal
         kode = (payload.get("kode_bahan") or "").lower().strip()
         nama = (payload.get("nama_bahan") or "").lower().strip()
         if not nama:
-            raise HTTPException(400, "nama_bahan wajib")
+            return JSONResponse({"error": "nama_bahan wajib"}, status_code=400)
         data = {
             "kode_bahan": kode,
             "nama_bahan": nama,
@@ -77,27 +127,31 @@ def save_bahan(payload: dict):
             "id_halal": payload.get("id_halal"),
             "hall_flag": payload.get("hall_flag"),
         }
-        # upsert by id if exists
         if payload.get("id"):
             sb.table("bahan").update(data).eq("id", payload.get("id")).execute()
         else:
-            # cek duplikat kode
             sb.table("bahan").upsert(data, on_conflict="kode_bahan").execute()
         return {"ok": True}
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(400, str(e))
+        return JSONResponse({"error": str(e)}, status_code=400)
 
 @app.delete("/api/bahan/{id}")
 def delete_bahan(id: str):
     sb = get_supabase()
+    if sb is None:
+        return JSONResponse({"error": "supabase not configured"}, status_code=400)
     try:
         sb.table("bahan").delete().eq("id", id).execute()
         return {"ok": True}
     except Exception as e:
-        raise HTTPException(400, str(e))
+        return JSONResponse({"error": str(e)}, status_code=400)
 
 @app.get("/health")
 def health():
-    return {"ok": True, "templates_path": templates_path}
+    files = []
+    try:
+        if os.path.exists(templates_path):
+            files = os.listdir(templates_path)[:10]
+    except:
+        pass
+    return {"ok": True, "templates_path": templates_path, "files": files, "has_supabase": get_supabase() is not None}
