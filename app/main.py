@@ -204,12 +204,6 @@ async def bahan_minimum():
     except Exception as e:
         return {"items": [], "count": 0, "error": str(e)}
 
-@app.get("/api/kategori/list")
-async def kategori_list():
-    utama, sub = get_kategori_data()
-    return {"utama":utama,"sub":sub}
-
-# === ROOT ===
 
 @app.post("/api/kategori/utama/save")
 async def save_kategori_utama(request: Request):
@@ -219,8 +213,8 @@ async def save_kategori_utama(request: Request):
     label = str(data.get("label","")).strip()
     if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
     if not label: raise HTTPException(400,"Label wajib")
-    saved = []
-    last_err = ""
+    saved=[]
+    last_err=""
     try:
         chk = supabase.table("kategori_master").select("code").eq("code", code).execute()
         if chk.data:
@@ -229,8 +223,8 @@ async def save_kategori_utama(request: Request):
             supabase.table("kategori_master").insert({"id": str(uuid.uuid4()), "code": code, "label": label, "type": "utama", "is_active": True}).execute()
         saved.append("kategori_master")
     except Exception as e:
-        last_err = str(e)
-    for tbl in ["kategori_bahan", "kategori"]:
+        last_err=str(e)
+    for tbl in ["kategori_bahan","kategori"]:
         try:
             chk = supabase.table(tbl).select("kode_kategori").eq("kode_kategori", code).execute()
             if chk.data:
@@ -239,7 +233,7 @@ async def save_kategori_utama(request: Request):
                 supabase.table(tbl).insert({"kode_kategori": code, "nama_kategori": label}).execute()
             saved.append(tbl)
         except Exception as e:
-            last_err = str(e)
+            last_err=str(e)
             continue
     if not saved:
         raise HTTPException(500, f"Gagal save utama {code}: {last_err}")
@@ -252,8 +246,10 @@ async def save_kategori_sub(request: Request):
     code = str(data.get("code","")).lower().strip()
     label = str(data.get("label","")).strip()
     parent = str(data.get("parent","") or data.get("parent_code","")).lower().strip()
-    if len(code)!=3 or len(parent)!=3: raise HTTPException(400,"Code dan parent harus 3 huruf")
-    if not label: raise HTTPException(400,"Label wajib")
+    if len(code)!=3 or len(parent)!=3:
+        raise HTTPException(400,f"Code dan parent harus 3 huruf, got code={code} parent={parent}")
+    if not label:
+        raise HTTPException(400,"Label wajib")
     saved=[]
     last_err=""
     try:
@@ -265,25 +261,43 @@ async def save_kategori_sub(request: Request):
         saved.append("kategori_master")
     except Exception as e:
         last_err=str(e)
-    # sub kategori tidak perlu masuk kategori_bahan, cukup kategori_master
     if not saved:
         raise HTTPException(500, f"Gagal save sub {code}: {last_err}")
     return {"ok": True, "tables": saved, "code": code, "parent": parent}
 
+@app.delete("/api/kategori/utama/{code}")
 @app.delete("/api/kategori/{code}")
 async def delete_kategori(code: str):
     if not supabase: raise HTTPException(500,"No supabase")
     code = code.lower().strip()
     try:
-        for tbl in ["kategori_master"]:
-            supabase.table(tbl).delete().eq("code", code).execute()
-        for tbl in ["kategori_bahan","kategori"]:
-            supabase.table(tbl).delete().eq("kode_kategori", code).execute()
-        return {"ok": True, "deleted": code}
+        supabase.table("kategori_master").delete().eq("code", code).execute()
+    except Exception: pass
+    try:
+        supabase.table("kategori_bahan").delete().eq("kode_kategori", code).execute()
+    except Exception: pass
+    try:
+        supabase.table("kategori").delete().eq("kode_kategori", code).execute()
+    except Exception: pass
+    return {"ok": True, "deleted": code}
+
+@app.delete("/api/kategori/sub/{code}")
+async def delete_kategori_sub(code: str):
+    if not supabase: raise HTTPException(500,"No supabase")
+    code = code.lower().strip()
+    try:
+        supabase.table("kategori_master").delete().eq("code", code).execute()
     except Exception as e:
         raise HTTPException(400, str(e))
+    return {"ok": True, "deleted": code}
 
 
+@app.get("/api/kategori/list")
+async def kategori_list():
+    utama, sub = get_kategori_data()
+    return {"utama":utama,"sub":sub}
+
+# === ROOT ===
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return RedirectResponse("/dashboard/admin")
@@ -413,35 +427,8 @@ async def generic_redirect(request: Request):
     return RedirectResponse("/dashboard/admin")
 
 # === KATEGORI PROTEKSI ===
-@app.delete("/api/kategori/utama/{code}")
-async def delete_kategori_utama(code: str):
-    if not supabase: raise HTTPException(500,"No supabase")
-    code = code.lower().strip()
-    try:
-        res = supabase.table("bahan_inventory").select("id").eq("kategori_utama", code).limit(1).execute()
-        if res.data:
-            raise HTTPException(400, f"Tidak bisa hapus '{code}' karena masih dipakai bahan.")
-        supabase.table("kategori_bahan").delete().eq("code", code).eq("type","utama").execute()
-        return {"ok":True}
-    except HTTPException: raise
-    except Exception as e:
-        raise HTTPException(400, f"Gagal hapus: {e}")
 
-@app.delete("/api/kategori/sub/{code}")
-async def delete_kategori_sub(code: str):
-    if not supabase: raise HTTPException(500,"No supabase")
-    code = code.lower().strip()
-    try:
-        res = supabase.table("bahan_inventory").select("id").eq("kode_kategori", code).limit(1).execute()
-        if res.data:
-            raise HTTPException(400, f"Tidak bisa hapus sub '{code}' karena masih dipakai.")
-        supabase.table("kategori_bahan").delete().eq("code", code).eq("type","sub").execute()
-        return {"ok":True}
-    except HTTPException: raise
-    except Exception as e:
-        raise HTTPException(400, f"Gagal hapus: {e}")
 
-# === INVENTORY DETAIL - untuk inventory_detail.html ===
 @app.get("/dashboard/admin/inventory/{bahan_id}", response_class=HTMLResponse)
 async def inventory_detail(bahan_id: str, request: Request):
     bahan = None
@@ -616,55 +603,7 @@ async def api_bahan_save(request: Request):
         raise HTTPException(500, str(e))
 
 # === API KATEGORI SAVE ===
-@app.post("/api/kategori/utama/save")
-async def save_kategori_utama(request: Request):
-    if not supabase: raise HTTPException(500,"No supabase")
-    data = await request.json()
-    code = str(data.get("code","")).lower().strip()
-    label = str(data.get("label","")).strip()
-    if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
-    if not label: raise HTTPException(400,"Label wajib")
-    last_err = ""
-    for tbl in ["kategori_bahan", "kategori_master"]:
-        try:
-            chk = supabase.table(tbl).select("code").eq("code", code).execute()
-            if chk.data:
-                supabase.table(tbl).update({"label": label, "type": "utama"}).eq("code", code).execute()
-            else:
-                # coba insert minimal - hanya kolom yang pasti ada
-                try:
-                    supabase.table(tbl).insert({"code": code, "label": label, "type": "utama"}).execute()
-                except Exception as e1:
-                    last_err = str(e1)
-                    # fallback dengan id
-                    supabase.table(tbl).insert({"id": str(uuid.uuid4()), "code": code, "label": label, "type": "utama"}).execute()
-            return {"ok": True, "table": tbl, "code": code}
-        except Exception as e:
-            last_err = str(e)
-            print(f"[save utama {tbl}] {last_err}")
-            continue
-    raise HTTPException(500, f"Gagal save utama {code}: {last_err}. Cek RLS - jalankan: CREATE POLICY allow_all ON kategori_bahan FOR ALL USING (true) WITH CHECK (true)").lower().strip()
-    label = str(data.get("label","")).strip()
-    parent = str(data.get("parent_code") or data.get("parent") or "").lower().strip()
-    if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
-    if not label or not parent: raise HTTPException(400,"Label & parent wajib")
-    for tbl in ["kategori_bahan", "kategori_master"]:
-        try:
-            chk = supabase.table(tbl).select("id,code").eq("code", code).execute()
-            if chk.data:
-                supabase.table(tbl).update({"label": label, "parent": parent, "parent_code": parent, "type": "sub"}).eq("code", code).execute()
-            else:
-                try:
-                    supabase.table(tbl).insert({"code": code, "label": label, "parent": parent, "parent_code": parent, "type": "sub"}).execute()
-                except:
-                    supabase.table(tbl).insert({"id": str(uuid.uuid4()), "code": code, "label": label, "parent": parent, "parent_code": parent, "type": "sub"}).execute()
-            return {"ok": True, "table": tbl}
-        except Exception as e:
-            print(f"[save sub {tbl}] {e}")
-            continue
-    raise HTTPException(500, "Gagal save sub - cek RLS policy INSERT di Supabase")
 
-# === API MENU SAVE & DELETE ===
 @app.post("/dashboard/admin/menu/save")
 async def menu_save(request: Request):
     if not supabase: raise HTTPException(500,"No supabase")
