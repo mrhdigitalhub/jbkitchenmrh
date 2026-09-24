@@ -365,3 +365,296 @@ async def delete_kategori_sub(code: str):
     except HTTPException: raise
     except Exception as e:
         raise HTTPException(400, f"Gagal hapus: {e}")
+
+# === INVENTORY DETAIL - untuk inventory_detail.html ===
+@app.get("/dashboard/admin/inventory/{bahan_id}", response_class=HTMLResponse)
+async def inventory_detail(bahan_id: str, request: Request):
+    bahan = None
+    kategori_label = ""
+    sub_label = ""
+    if supabase:
+        try:
+            res = supabase.table("bahan_inventory").select("*").eq("id", bahan_id).single().execute()
+            bahan = res.data
+            # join kategori label
+            if bahan:
+                try:
+                    kat_code = bahan.get("kategori_utama")
+                    sub_code = bahan.get("kode_kategori")
+                    if kat_code:
+                        rk = supabase.table("kategori_bahan").select("label").eq("code", kat_code).eq("type","utama").execute()
+                        if rk.data:
+                            kategori_label = rk.data[0].get("label","")
+                    if sub_code:
+                        rs = supabase.table("kategori_bahan").select("label").eq("code", sub_code).eq("type","sub").execute()
+                        if rs.data:
+                            sub_label = rs.data[0].get("label","")
+                except:
+                    pass
+        except:
+            try:
+                res = supabase.table("bahan_inventory").select("*").eq("id", bahan_id).execute()
+                if res.data:
+                    bahan = res.data[0]
+            except Exception as e:
+                print(f"[detail] {e}")
+    if templates is None:
+        return HTMLResponse(f"<h3>Detail {bahan_id} - templates not found</h3>")
+    for tmpl_name in ["inventory_detail.html", "detail_bahan.html"]:
+        try:
+            p = Path(templates.env.loader.searchpath[0]) / tmpl_name
+            if p.exists():
+                try:
+                    return templates.TemplateResponse(request, tmpl_name, {"request": request, "bahan": bahan or {}, "kategori_label": kategori_label, "sub_label": sub_label})
+                except:
+                    return templates.TemplateResponse(tmpl_name, {"request": request, "bahan": bahan or {}, "kategori_label": kategori_label, "sub_label": sub_label})
+        except:
+            continue
+    return HTMLResponse(f"<h1>Detail Bahan</h1><p>{bahan}</p><a href='/dashboard/admin/inventory'>Back</a>")
+
+# === BOM RESEP & PAKET - untuk resep_bom.html & paket_bom.html ===
+@app.get("/dashboard/admin/menu/resep/{menu_id}", response_class=HTMLResponse)
+async def resep_bom(menu_id: str, request: Request):
+    menu = None
+    bahan_list = []
+    bom_items = []
+    if supabase:
+        try:
+            res = supabase.table("menu_master").select("*").eq("id", menu_id).single().execute()
+            menu = res.data
+        except:
+            try:
+                res = supabase.table("menu_master").select("*").eq("id", menu_id).execute()
+                if res.data: menu = res.data[0]
+            except: pass
+        try:
+            res_b = supabase.table("bahan_inventory").select("id,nama_bahan,kode_bahan,harga_per_satuan,satuan_default,stock_qty").order("nama_bahan").execute()
+            bahan_list = res_b.data or []
+        except Exception as e:
+            print(f"[bom bahan] {e}")
+        # coba load bom existing dari tabel menu_bom / kamus_bom / resep_bom
+        for tbl in ["menu_bom", "kamus_bom", "resep_bom", "bom_resep"]:
+            try:
+                res_bom = supabase.table(tbl).select("*").eq("menu_id", menu_id).execute()
+                if res_bom.data:
+                    bom_items = res_bom.data
+                    break
+            except: continue
+    if templates is None:
+        return HTMLResponse(f"<h3>BOM Resep {menu_id}</h3>")
+    for tmpl_name in ["resep_bom.html", "bom_resep.html", "resep.html"]:
+        try:
+            p = Path(templates.env.loader.searchpath[0]) / tmpl_name
+            if p.exists():
+                try:
+                    return templates.TemplateResponse(request, tmpl_name, {"request": request, "menu": menu or {"kode_menu": menu_id, "nama_menu": "Resep"}, "bahan": bahan_list, "bom": bom_items, "menus": []})
+                except:
+                    return templates.TemplateResponse(tmpl_name, {"request": request, "menu": menu or {}, "bahan": bahan_list, "bom": bom_items})
+        except: continue
+    return HTMLResponse(f"<h1>Resep BOM {menu_id}</h1><p>Template resep_bom.html tidak ditemukan</p><a href='/dashboard/admin/menu'>Back</a>")
+
+@app.get("/dashboard/admin/menu/paket/{menu_id}", response_class=HTMLResponse)
+async def paket_bom(menu_id: str, request: Request):
+    menu = None
+    bahan_list = []
+    resep_list = []
+    bom_items = []
+    if supabase:
+        try:
+            res = supabase.table("menu_master").select("*").eq("id", menu_id).single().execute()
+            menu = res.data
+        except:
+            try:
+                res = supabase.table("menu_master").select("*").eq("id", menu_id).execute()
+                if res.data: menu = res.data[0]
+            except: pass
+        try:
+            res_b = supabase.table("bahan_inventory").select("id,nama_bahan,kode_bahan,harga_per_satuan,satuan_default").order("nama_bahan").execute()
+            bahan_list = res_b.data or []
+        except: pass
+        try:
+            res_r = supabase.table("menu_master").select("id,kode_menu,nama_menu,tipe_menu").eq("tipe_menu","resep_masakan").execute()
+            resep_list = res_r.data or []
+            if not resep_list:
+                res_r = supabase.table("menu_master").select("*").execute()
+                resep_list = [m for m in (res_r.data or []) if str(m.get("tipe_menu","")).lower()=="resep_masakan" or str(m.get("tipe","")).lower()=="resep_masakan"]
+        except: pass
+        for tbl in ["paket_bom", "menu_bom", "kamus_bom"]:
+            try:
+                res_bom = supabase.table(tbl).select("*").eq("menu_id", menu_id).execute()
+                if res_bom.data:
+                    bom_items = res_bom.data
+                    break
+            except: continue
+    if templates is None:
+        return HTMLResponse(f"<h3>Paket BOM {menu_id}</h3>")
+    for tmpl_name in ["paket_bom.html", "bom_paket.html", "paket.html"]:
+        try:
+            p = Path(templates.env.loader.searchpath[0]) / tmpl_name
+            if p.exists():
+                try:
+                    return templates.TemplateResponse(request, tmpl_name, {"request": request, "menu": menu or {"kode_menu": menu_id, "nama_menu": "Paket"}, "bahan": bahan_list, "resep": resep_list, "bom": bom_items})
+                except:
+                    return templates.TemplateResponse(tmpl_name, {"request": request, "menu": menu or {}, "bahan": bahan_list, "resep": resep_list, "bom": bom_items})
+        except: continue
+    return HTMLResponse(f"<h1>Paket BOM {menu_id}</h1><a href='/dashboard/admin/menu'>Back</a>")
+
+# === API BAHAN SAVE JSON - untuk inventory_stock.html tombol Save ===
+@app.post("/api/bahan/save")
+async def api_bahan_save(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    try:
+        data = await request.json()
+    except:
+        form = await request.form()
+        data = dict(form)
+    try:
+        stock_qty = safe_float(data.get("stock_qty"), 0)
+        if data.get("stock_awal") is not None:
+            stock_qty = safe_float(data.get("stock_awal"),0) + safe_float(data.get("tambah"),0) - safe_float(data.get("terpakai"),0) or stock_qty
+        payload = {
+            "kode_bahan": data.get("kode_bahan"),
+            "nama_bahan": (data.get("nama_bahan") or "").lower(),
+            "kategori_utama": data.get("kategori_utama"),
+            "kode_kategori": data.get("kode_kategori"),
+            "satuan_default": data.get("satuan_default") or data.get("satuan") or "Kg",
+            "stock_qty": stock_qty,
+            "harga_per_satuan": safe_float(data.get("harga_per_satuan"),0),
+            "id_halal": data.get("id_halal"),
+            "updated_at": datetime.now().isoformat()
+        }
+        # hapus None
+        payload = {k:v for k,v in payload.items() if v is not None and v != ""}
+        if data.get("id"):
+            supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
+            return {"ok": True, "id": data.get("id")}
+        else:
+            payload["id"] = str(uuid.uuid4())
+            if not payload.get("kode_bahan"):
+                # auto gen kode
+                kat = (payload.get("kategori_utama") or "nbt").lower()
+                sub = (payload.get("kode_kategori") or "rmp").lower()
+                payload["kode_bahan"] = f"hall-{kat}-{sub}-001".lower()
+            supabase.table("bahan_inventory").insert(payload).execute()
+            return {"ok": True, "id": payload["id"]}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+# === API KATEGORI SAVE ===
+@app.post("/api/kategori/utama/save")
+async def save_kategori_utama(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    data = await request.json()
+    code = str(data.get("code","")).lower().strip()
+    label = str(data.get("label","")).strip()
+    if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
+    try:
+        supabase.table("kategori_bahan").upsert({"code":code,"label":label,"type":"utama"}, on_conflict="code").execute()
+    except:
+        try:
+            supabase.table("kategori_master").upsert({"code":code,"label":label,"type":"utama"}, on_conflict="code").execute()
+        except Exception as e:
+            raise HTTPException(500,str(e))
+    return {"ok":True}
+
+@app.post("/api/kategori/sub/save")
+async def save_kategori_sub(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    data = await request.json()
+    code = str(data.get("code","")).lower().strip()
+    label = str(data.get("label","")).strip()
+    parent = str(data.get("parent_code") or data.get("parent") or "").lower().strip()
+    if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
+    try:
+        supabase.table("kategori_bahan").upsert({"code":code,"label":label,"parent":parent,"parent_code":parent,"type":"sub"}, on_conflict="code").execute()
+    except:
+        try:
+            supabase.table("kategori_master").upsert({"code":code,"label":label,"parent":parent,"parent_code":parent,"type":"sub"}, on_conflict="code").execute()
+        except Exception as e:
+            raise HTTPException(500,str(e))
+    return {"ok":True}
+
+# === API MENU SAVE & DELETE ===
+@app.post("/dashboard/admin/menu/save")
+async def menu_save(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    form = await request.form()
+    data = dict(form)
+    try:
+        payload = {
+            "kode_menu": data.get("kode_menu") or data.get("kode"),
+            "nama_menu": (data.get("nama_menu") or data.get("nama") or "").lower(),
+            "kategori_menu": data.get("kategori_menu") or data.get("kategori") or "Nasi Box",
+            "tipe_menu": data.get("tipe_menu") or data.get("tipe") or "resep_masakan",
+            "porsi": safe_float(data.get("porsi"), 10),
+            "satuan": data.get("satuan") or "porsi",
+            "hpp": safe_float(data.get("hpp"),0),
+            "harga_jual": safe_float(data.get("harga_jual"),0),
+            "updated_at": datetime.now().isoformat()
+        }
+        if data.get("id"):
+            supabase.table("menu_master").update(payload).eq("id", data.get("id")).execute()
+        else:
+            payload["id"] = str(uuid.uuid4())
+            supabase.table("menu_master").insert(payload).execute()
+        return RedirectResponse("/dashboard/admin/menu", status_code=303)
+    except Exception as e:
+        raise HTTPException(500,str(e))
+
+@app.delete("/api/menu/delete/{menu_id}")
+async def delete_menu(menu_id: str):
+    if not supabase: raise HTTPException(500,"No supabase")
+    supabase.table("menu_master").delete().eq("id", menu_id).execute()
+    # hapus bom terkait
+    for tbl in ["menu_bom","kamus_bom","resep_bom","paket_bom"]:
+        try:
+            supabase.table(tbl).delete().eq("menu_id", menu_id).execute()
+        except: pass
+    return {"ok":True}
+
+# === API BOM SAVE ===
+@app.post("/api/bom/add")
+async def add_bom(request: Request):
+    if not supabase: raise HTTPException(500,"No supabase")
+    data = await request.json()
+    try:
+        payload = {
+            "id": str(uuid.uuid4()),
+            "menu_id": data.get("menu_id"),
+            "bahan_id": data.get("bahan_id"),
+            "qty": safe_float(data.get("qty"),0),
+            "satuan": data.get("satuan") or "Kg",
+            "created_at": datetime.now().isoformat()
+        }
+        # simpan ke menu_bom kalau ada, fallback kamus_bom
+        for tbl in ["menu_bom","kamus_bom","resep_bom"]:
+            try:
+                supabase.table(tbl).insert(payload).execute()
+                # update hpp di menu_master = sum qty*harga
+                try:
+                    # hitung hpp baru
+                    res_bom = supabase.table(tbl).select("qty,bahan_id").eq("menu_id", payload["menu_id"]).execute()
+                    total_hpp = 0
+                    for b in (res_bom.data or []):
+                        try:
+                            rb = supabase.table("bahan_inventory").select("harga_per_satuan").eq("id", b.get("bahan_id")).single().execute()
+                            if rb.data:
+                                total_hpp += safe_float(b.get("qty")) * safe_float(rb.data.get("harga_per_satuan"))
+                        except: pass
+                    supabase.table("menu_master").update({"hpp": total_hpp, "updated_at": datetime.now().isoformat()}).eq("id", payload["menu_id"]).execute()
+                except: pass
+                break
+            except: continue
+        return {"ok":True, "id": payload["id"]}
+    except Exception as e:
+        raise HTTPException(500,str(e))
+
+@app.delete("/api/bom/{bom_id}")
+async def delete_bom(bom_id: str):
+    if not supabase: raise HTTPException(500,"No supabase")
+    for tbl in ["menu_bom","kamus_bom","resep_bom","paket_bom"]:
+        try:
+            supabase.table(tbl).delete().eq("id", bom_id).execute()
+        except: pass
+    return {"ok":True}
+
