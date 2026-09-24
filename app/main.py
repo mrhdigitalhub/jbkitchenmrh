@@ -3,39 +3,28 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-app = FastAPI(title="JB KITCHEN")
+app = FastAPI()
 
-# Templates path - anti crash
 templates_path = os.path.join(os.path.dirname(__file__), "templates")
 if not os.path.exists(templates_path):
     templates_path = "app/templates"
 if not os.path.exists(templates_path):
     templates_path = os.path.join(os.getcwd(), "app/templates")
-if not os.path.exists(templates_path):
-    templates_path = "templates"
-print(f"[TEMPLATES] using {templates_path}")
+templates = Jinja2Templates(directory=templates_path)
 
-try:
-    templates = Jinja2Templates(directory=templates_path)
-except Exception as e:
-    print(f"Template init error: {e}")
-    templates = None
-
-# Import kategori router - ANTI CIRCULAR & ANTI CRASH
-kategori_router = None
+# kategori router - tetap
 try:
     from .api_kategori import router as kategori_router
-except Exception as e1:
+except:
     try:
         from app.api_kategori import router as kategori_router
-    except Exception as e2:
-        try:
-            from api_kategori import router as kategori_router
-        except Exception as e3:
-            print(f"[WARN] kategori_router gagal load: {e1} | {e2} | {e3}")
+    except:
+        from api_kategori import router as kategori_router
 
-if kategori_router is not None:
+try:
     app.include_router(kategori_router, prefix="/api/kategori", tags=["kategori"])
+except Exception as e:
+    print(f"kategori router not included: {e}")
 
 def get_supabase():
     try:
@@ -46,112 +35,126 @@ def get_supabase():
             return None
         return create_client(url, key)
     except Exception as e:
-        print(f"[Supabase] error: {e}")
+        print(f"supabase init error: {e}")
         return None
+
+def fetch_bahan_safe():
+    sb = get_supabase()
+    if sb is None:
+        return [], "SUPABASE_URL/KEY belum set"
+    # Coba beberapa nama tabel yang mungkin - FIX PGRST205
+    table_candidates = ["bahan", "kategori_bahan", "master_bahan", "bahan_baku", "inventory_bahan"]
+    last_err = None
+    for tbl in table_candidates:
+        try:
+            res = sb.table(tbl).select("*").order("kode_bahan").limit(200).execute()
+            data = res.data or []
+            print(f"[OK] table {tbl} -> {len(data)} rows")
+            return data, f"table:{tbl}"
+        except Exception as e:
+            last_err = str(e)
+            # jika PGRST205 lanjut coba tabel lain
+            if "PGRST205" in str(e) or "Could not find the table" in str(e) or "schema cache" in str(e):
+                print(f"[TRY] {tbl} not found, coba next")
+                continue
+            else:
+                print(f"[ERR] {tbl}: {e}")
+                continue
+    return [], last_err or "semua tabel bahan tidak ditemukan"
 
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
-    # anti 500
-    if templates is None:
-        return HTMLResponse("<h1>JB KITCHEN - Templates not found</h1>", status_code=200)
+    bahan, info = fetch_bahan_safe()
     try:
-        sb = get_supabase()
-        bahan = []
-        if sb:
-            try:
-                res = sb.table("bahan").select("*").order("kode_bahan").limit(100).execute()
-                bahan = res.data or []
-            except Exception as e:
-                print(f"bahan fetch error: {e}")
-                bahan = []
-        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan)})
+        # FIX: signature baru Jinja2Templates -> request sebagai arg pertama
+        return templates.TemplateResponse(request, "inventory_stock.html", {"bahan": bahan, "total": len(bahan), "info": info})
     except Exception as e:
-        print(f"ROOT error: {e}")
-        return HTMLResponse(f"<pre>Error: {e}</pre><a href='/health'>health</a>", status_code=200)
+        # fallback signature lama
+        try:
+            return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan), "info": info})
+        except Exception as e2:
+            return HTMLResponse(f"<h1>Fallback root</h1><p>{e}</p><p>{e2}</p><p>info:{info}</p><p>bahan:{len(bahan)}</p>", status_code=200)
 
 @app.get("/dashboard/admin/inventory", response_class=HTMLResponse)
 def inventory_page(request: Request):
-    # INI YANG BIKIN INTERNAL SERVER ERROR KEMARIN - sekarang anti crash
-    if templates is None:
-        return HTMLResponse("<h1>JB KITCHEN - Templates folder missing</h1><p>Check app/templates/inventory_stock.html</p>", status_code=200)
-    bahan = []
-    error_msg = None
-    sb = get_supabase()
-    if sb is None:
-        error_msg = "SUPABASE_URL / KEY belum set di Vercel"
-    else:
-        try:
-            res = sb.table("bahan").select("*").order("kode_bahan").execute()
-            bahan = res.data or []
-        except Exception as e:
-            error_msg = str(e)
-            print(f"[inventory] supabase error: {e}")
-            bahan = []
+    bahan, info = fetch_bahan_safe()
+    err_str = str(info) if info else ""
     try:
-        return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan), "error": error_msg})
-    except Exception as e:
-        # JANGAN 500, kembalikan HTML langsung
-        print(f"[TemplateResponse error] {e}")
-        html = f"<html><body><h1>Inventory - fallback</h1><p>Error template: {e}</p><p>Bahan count: {len(bahan)}</p><pre>{error_msg}</pre><a href='/health'>/health</a></body></html>"
-        return HTMLResponse(html, status_code=200)
+        # FIX tuple dict key -> pakai signature request pertama
+        return templates.TemplateResponse(request, "inventory_stock.html", {"bahan": bahan, "total": len(bahan), "info": err_str})
+    except Exception as e1:
+        print(f"TemplateResponse new sig error: {e1}")
+        try:
+            # coba old sig
+            return templates.TemplateResponse("inventory_stock.html", {"request": request, "bahan": bahan, "total": len(bahan), "info": err_str})
+        except Exception as e2:
+            print(f"TemplateResponse old sig error: {e2}")
+            # anti 500 - kembalikan HTML langsung dengan info lengkap dari screenshot Bapak
+            html = f"""
+            <html><head><title>Inventory - fallback</title></head><body>
+            <h1>Inventory - fallback (anti 500)</h1>
+            <p><b>Error template:</b> {e1} | {e2}</p>
+            <p><b>Bahan count:</b> {len(bahan)}</p>
+            <p><b>Info DB:</b> {err_str}</p>
+            <p>Bahan sample: {str(bahan[:1])[:500]}</p>
+            <hr><a href='/health'>/health</a> | <a href='/api/bahan/list'>/api/bahan/list</a>
+            </body></html>
+            """
+            return HTMLResponse(html, status_code=200)
 
 @app.get("/api/bahan/list")
 def list_bahan():
-    sb = get_supabase()
-    if sb is None:
-        return JSONResponse({"bahan": [], "error": "supabase not configured"}, status_code=200)
-    try:
-        data = sb.table("bahan").select("*").order("kode_bahan").execute().data or []
-        return {"bahan": data}
-    except Exception as e:
-        return {"bahan": [], "error": str(e)}
+    bahan, info = fetch_bahan_safe()
+    return {"bahan": bahan, "info": info, "total": len(bahan)}
 
 @app.post("/api/bahan/save")
 def save_bahan(payload: dict):
     sb = get_supabase()
-    if sb is None:
-        return JSONResponse({"error": "supabase not configured"}, status_code=200)
-    try:
-        kode = (payload.get("kode_bahan") or "").lower().strip()
-        nama = (payload.get("nama_bahan") or "").lower().strip()
-        if not nama:
-            return JSONResponse({"error": "nama_bahan wajib"}, status_code=400)
-        data = {
-            "kode_bahan": kode,
-            "nama_bahan": nama,
-            "kategori_utama": (payload.get("kategori_utama") or "").lower(),
-            "kode_kategori": (payload.get("kode_kategori") or "").lower(),
-            "satuan_default": payload.get("satuan_default") or "Kg",
-            "stock_qty": float(payload.get("stock_qty") or 0),
-            "harga_per_satuan": float(payload.get("harga_per_satuan") or 0),
-            "id_halal": payload.get("id_halal"),
-            "hall_flag": payload.get("hall_flag"),
-        }
-        if payload.get("id"):
-            sb.table("bahan").update(data).eq("id", payload.get("id")).execute()
-        else:
-            sb.table("bahan").upsert(data, on_conflict="kode_bahan").execute()
-        return {"ok": True}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    if not sb:
+        return JSONResponse({"error": "supabase not configured"}, status_code=400)
+    # coba tulis ke tabel yang ada
+    for tbl in ["bahan", "kategori_bahan", "master_bahan"]:
+        try:
+            data = {
+                "kode_bahan": (payload.get("kode_bahan") or "").lower().strip(),
+                "nama_bahan": (payload.get("nama_bahan") or "").lower().strip(),
+                "kategori_utama": (payload.get("kategori_utama") or "").lower(),
+                "kode_kategori": (payload.get("kode_kategori") or "").lower(),
+                "satuan_default": payload.get("satuan_default") or "Kg",
+                "stock_qty": float(payload.get("stock_qty") or 0),
+                "harga_per_satuan": float(payload.get("harga_per_satuan") or 0),
+            }
+            if payload.get("id"):
+                sb.table(tbl).update(data).eq("id", payload.get("id")).execute()
+            else:
+                sb.table(tbl).upsert(data, on_conflict="kode_bahan").execute()
+            return {"ok": True, "table": tbl}
+        except Exception as e:
+            if "PGRST205" in str(e):
+                continue
+            return JSONResponse({"error": str(e), "table": tbl}, status_code=400)
+    return JSONResponse({"error": "tidak ada tabel bahan yang bisa ditulis"}, status_code=400)
 
 @app.delete("/api/bahan/{id}")
 def delete_bahan(id: str):
     sb = get_supabase()
-    if sb is None:
+    if not sb:
         return JSONResponse({"error": "supabase not configured"}, status_code=400)
-    try:
-        sb.table("bahan").delete().eq("id", id).execute()
-        return {"ok": True}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    for tbl in ["bahan", "kategori_bahan"]:
+        try:
+            sb.table(tbl).delete().eq("id", id).execute()
+            return {"ok": True, "table": tbl}
+        except Exception as e:
+            if "PGRST205" in str(e):
+                continue
+            return JSONResponse({"error": str(e)}, status_code=400)
+    return JSONResponse({"error": "table not found"}, status_code=400)
 
 @app.get("/health")
 def health():
-    files = []
+    bahan, info = fetch_bahan_safe()
     try:
-        if os.path.exists(templates_path):
-            files = os.listdir(templates_path)[:10]
+        files = os.listdir(templates_path)[:20]
     except:
-        pass
-    return {"ok": True, "templates_path": templates_path, "files": files, "has_supabase": get_supabase() is not None}
+        files = []
+    return {"ok": True, "templates_path": templates_path, "files": files, "bahan_total": len(bahan), "db_info": str(info)}
