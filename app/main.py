@@ -266,11 +266,25 @@ async def save_kategori_sub(request: Request):
         raise HTTPException(500, f"Gagal save sub {code}: {last_err}")
     return {"ok": True, "tables": saved, "code": code, "parent": parent}
 
+
+
+
+
 @app.delete("/api/kategori/utama/{code}")
 @app.delete("/api/kategori/{code}")
 async def delete_kategori(code: str):
     if not supabase: raise HTTPException(500,"No supabase")
     code = code.lower().strip()
+    # cek apakah dipakai bahan
+    try:
+        res = supabase.table("bahan_inventory").select("id", count="exact").or_(f"kategori_utama.eq.{code},kode_kategori.eq.{code}").execute()
+        cnt = getattr(res, 'count', 0) or len(res.data or [])
+        if cnt and cnt > 0:
+            raise HTTPException(400, f"Kategori {code} masih dipakai {cnt} bahan, tidak bisa dihapus. Ubah bahan dulu atau hanya edit label.")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
     try:
         supabase.table("kategori_master").delete().eq("code", code).execute()
     except Exception: pass
@@ -286,6 +300,16 @@ async def delete_kategori(code: str):
 async def delete_kategori_sub(code: str):
     if not supabase: raise HTTPException(500,"No supabase")
     code = code.lower().strip()
+    # cek apakah sub dipakai
+    try:
+        res = supabase.table("bahan_inventory").select("id", count="exact").eq("kode_kategori", code).execute()
+        cnt = getattr(res, 'count', 0) or len(res.data or [])
+        if cnt and cnt > 0:
+            raise HTTPException(400, f"Sub kategori {code} masih dipakai {cnt} bahan (misal bahan dengan sub {code}), tidak bisa dihapus. Pindahkan bahan dulu.")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
     try:
         supabase.table("kategori_master").delete().eq("code", code).execute()
     except Exception as e:
@@ -563,6 +587,7 @@ async def paket_bom(menu_id: str, request: Request):
     return HTMLResponse(f"<h1>Paket BOM {menu_id}</h1><a href='/dashboard/admin/menu'>Back</a>")
 
 # === API BAHAN SAVE JSON - untuk inventory_stock.html tombol Save ===
+
 @app.post("/api/bahan/save")
 async def api_bahan_save(request: Request):
     if not supabase: raise HTTPException(500,"No supabase")
@@ -578,15 +603,14 @@ async def api_bahan_save(request: Request):
         payload = {
             "kode_bahan": data.get("kode_bahan"),
             "nama_bahan": (data.get("nama_bahan") or "").lower(),
-            "kategori_utama": data.get("kategori_utama"),
-            "kode_kategori": data.get("kode_kategori"),
+            "kategori_utama": (data.get("kategori_utama") or "").lower(),
+            "kode_kategori": (data.get("kode_kategori") or "").lower(),
             "satuan_default": data.get("satuan_default") or data.get("satuan") or "Kg",
             "stock_qty": stock_qty,
             "harga_per_satuan": safe_float(data.get("harga_per_satuan"),0),
             "id_halal": data.get("id_halal"),
             "updated_at": datetime.now().isoformat()
         }
-        # hapus None
         payload = {k:v for k,v in payload.items() if v is not None and v != ""}
         if data.get("id"):
             supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
@@ -594,12 +618,45 @@ async def api_bahan_save(request: Request):
         else:
             payload["id"] = str(uuid.uuid4())
             if not payload.get("kode_bahan"):
-                # auto gen kode
-                kat = (payload.get("kategori_utama") or "nbt").lower()
-                sub = (payload.get("kode_kategori") or "rmp").lower()
-                payload["kode_bahan"] = f"hall-{kat}-{sub}-001".lower()
-            supabase.table("bahan_inventory").insert(payload).execute()
-            return {"ok": True, "id": payload["id"]}
+                kat = (payload.get("kategori_utama") or "nbt").lower()[:3]
+                sub = (payload.get("kode_kategori") or "rmp").lower()[:3]
+                # cari nomor terakhir untuk kat-sub
+                try:
+                    res = supabase.table("bahan_inventory").select("kode_bahan").ilike("kode_bahan", f"%-{kat}-{sub}-%").execute()
+                    nums = []
+                    for r in (res.data or []):
+                        kb = r.get("kode_bahan","")
+                        try:
+                            num = int(kb.split("-")[-1])
+                            nums.append(num)
+                        except:
+                            pass
+                    next_num = max(nums)+1 if nums else 1
+                except:
+                    next_num = 1
+                payload["kode_bahan"] = f"hall-{kat}-{sub}-{next_num:03d}".lower()
+            # coba insert, kalau duplicate kode_bahan, auto increment lagi
+            for attempt in range(5):
+                try:
+                    supabase.table("bahan_inventory").insert(payload).execute()
+                    break
+                except Exception as e:
+                    err = str(e).lower()
+                    if "duplicate" in err or "kode_bahan" in err or "unique" in err:
+                        try:
+                            cur = int(payload["kode_bahan"].split("-")[-1])
+                            payload["kode_bahan"] = "-".join(payload["kode_bahan"].split("-")[:-1]) + f"-{cur+1:03d}"
+                            continue
+                        except:
+                            payload["kode_bahan"] = payload["kode_bahan"] + f"-{attempt+1}"
+                            continue
+                    else:
+                        raise HTTPException(400, str(e))
+            return {"ok": True, "id": payload["id"], "kode_bahan": payload["kode_bahan"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
     except Exception as e:
         raise HTTPException(500, str(e))
 
