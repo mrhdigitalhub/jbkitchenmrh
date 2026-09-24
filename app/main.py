@@ -60,8 +60,9 @@ DEFAULT_UTAMA = [
     {"code":"dgi","label":"Bahan Hewani / Daging","type":"utama"},
     {"code":"nbt","label":"Bahan Nabati","type":"utama"},
     {"code":"pck","label":"Packaging Kertas / Karton","type":"utama"},
-    {"code":"plk","label":"Plastik & Kemasan","type":"utama"},
+    {"code":"pik","label":"Plastik & Kemasan","type":"utama"},
     {"code":"prs","label":"Perasa / Saus","type":"utama"},
+    {"code":"raw","label":"Bahan Pendukung Utama","type":"utama"},
 ]
 DEFAULT_SUB = [
     {"code":"cir","label":"Cairan","parent":"cuc","type":"sub"},
