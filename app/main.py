@@ -317,6 +317,112 @@ async def delete_kategori_sub(code: str):
     return {"ok": True, "deleted": code}
 
 
+
+@app.get("/api/debug/bahan")
+async def debug_bahan():
+    if not supabase:
+        return {"error":"no supabase"}
+    try:
+        res = supabase.table("bahan_inventory").select("kode_bahan,nama_bahan,kategori_utama,kode_kategori").ilike("kode_bahan","%raw-tpg%").limit(50).execute()
+        return {"data": res.data, "count": len(res.data or [])}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/bahan/save")
+async def api_bahan_save(request: Request):
+    from fastapi.responses import JSONResponse
+    if not supabase:
+        return JSONResponse({"ok": False, "error": "No supabase"}, status_code=500)
+    try:
+        data = await request.json()
+    except:
+        try:
+            form = await request.form()
+            data = dict(form)
+        except:
+            data = {}
+    try:
+        nama = (data.get("nama_bahan") or "").lower().strip()
+        if not nama:
+            return JSONResponse({"ok": False, "error": "Nama bahan wajib"}, status_code=400)
+        kat = (data.get("kategori_utama") or "nbt").lower().strip()[:3] or "nbt"
+        sub = (data.get("kode_kategori") or "rmp").lower().strip()[:3] or "rmp"
+        flag = "hall"
+        fb = (data.get("fhall") or data.get("flag") or data.get("kode_bahan") or "").lower()
+        if "orgk" in fb:
+            flag="orgk"
+        base_prefix = f"{flag}-{kat}-{sub}-"
+        max_num = 0
+        try:
+            res = supabase.table("bahan_inventory").select("kode_bahan").ilike("kode_bahan", f"{base_prefix}%").execute()
+            for r in (res.data or []):
+                try:
+                    n=int((r.get("kode_bahan") or "").split("-")[-1])
+                    max_num=max(max_num,n)
+                except:
+                    pass
+        except Exception as e:
+            print(f"hitung error {e}")
+        next_num = max_num+1
+        kode_input = (data.get("kode_bahan") or "").lower().strip()
+        if kode_input:
+            try:
+                chk=supabase.table("bahan_inventory").select("id").eq("kode_bahan", kode_input).execute()
+                if chk.data and not data.get("id"):
+                    kode_input = f"{base_prefix}{next_num:03d}"
+            except:
+                pass
+        if not kode_input:
+            kode_input = f"{base_prefix}{next_num:03d}"
+        payload = {
+            "kode_bahan": kode_input,
+            "nama_bahan": nama,
+            "kategori_utama": kat,
+            "kode_kategori": sub,
+            "satuan_default": data.get("satuan_default") or data.get("satuan") or "Kg",
+            "stock_qty": 0,
+            "harga_per_satuan": 0,
+            "id_halal": data.get("id_halal"),
+            "updated_at": __import__("datetime").datetime.now().isoformat()
+        }
+        try:
+            payload["stock_qty"]=float(str(data.get("stock_qty") or 0).replace(",","."))
+        except:
+            payload["stock_qty"]=0
+        try:
+            payload["harga_per_satuan"]=float(str(data.get("harga_per_satuan") or 0).replace(",",".").replace("rp","") or 0)
+        except:
+            payload["harga_per_satuan"]=0
+        payload={k:v for k,v in payload.items() if v is not None and v!=""}
+        if data.get("id"):
+            supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
+            return JSONResponse({"ok": True, "id": data.get("id"), "kode_bahan": kode_input, "mode":"update"})
+        else:
+            for attempt in range(15):
+                try:
+                    import uuid
+                    pi=dict(payload)
+                    pi["id"]=str(uuid.uuid4())
+                    supabase.table("bahan_inventory").insert(pi).execute()
+                    return JSONResponse({"ok": True, "id": pi["id"], "kode_bahan": kode_input, "attempt": attempt})
+                except Exception as e:
+                    err=str(e).lower()
+                    if "duplicate" in err or "unique" in err or "kode_bahan" in err:
+                        next_num+=1
+                        kode_input=f"{base_prefix}{next_num:03d}"
+                        payload["kode_bahan"]=kode_input
+                        continue
+                    else:
+                        import traceback; traceback.print_exc()
+                        return JSONResponse({"ok": False, "error": str(e), "payload": payload}, status_code=400)
+            return JSONResponse({"ok": False, "error": "Gagal after 15 retry"}, status_code=400)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+
 @app.get("/api/kategori/list")
 async def kategori_list():
     utama, sub = get_kategori_data()
@@ -589,119 +695,6 @@ async def paket_bom(menu_id: str, request: Request):
 # === API BAHAN SAVE JSON - untuk inventory_stock.html tombol Save ===
 
 
-@app.post("/api/bahan/save")
-async def api_bahan_save(request: Request):
-    if not supabase: raise HTTPException(500,"No supabase")
-    try:
-        data = await request.json()
-    except:
-        try:
-            form = await request.form()
-            data = dict(form)
-        except:
-            data = {}
-    try:
-        nama = (data.get("nama_bahan") or "").lower().strip()
-        if not nama:
-            raise HTTPException(400,"Nama bahan wajib")
-        kat = (data.get("kategori_utama") or data.get("kode_kategori_utama") or "nbt").lower().strip()[:3] or "nbt"
-        sub = (data.get("kode_kategori") or data.get("sub_kategori") or "rmp").lower().strip()[:3] or "rmp"
-        # ambil flag hall/orgk
-        flag_raw = (data.get("flag") or data.get("hall") or data.get("kode_bahan") or "")
-        flag = "hall"
-        if isinstance(flag_raw, str) and flag_raw:
-            if "orgk" in flag_raw.lower():
-                flag = "orgk"
-            elif "hall" in flag_raw.lower():
-                flag = "hall"
-        if data.get("fhall"):
-            f = data.get("fhall").lower()
-            if "orgk" in f: flag="orgk"
-            else: flag="hall"
-
-        stock_qty = 0.0
-        try:
-            stock_qty = float(str(data.get("stock_qty") or data.get("fstock") or 0).replace(",","."))
-        except: stock_qty=0
-
-        harga = 0.0
-        try:
-            harga = float(str(data.get("harga_per_satuan") or data.get("fharga") or 0).replace(",",".").replace("rp","").strip())
-        except: harga=0
-
-        # hitung next kode
-        base_prefix = f"{flag}-{kat}-{sub}-"
-        try:
-            res = supabase.table("bahan_inventory").select("kode_bahan").ilike("kode_bahan", f"{base_prefix}%").execute()
-            max_num = 0
-            for r in (res.data or []):
-                kb = (r.get("kode_bahan") or "").lower()
-                try:
-                    n = int(kb.split("-")[-1])
-                    if n>max_num: max_num=n
-                except: pass
-            next_num = max_num+1
-        except Exception as e:
-            print(f"hitung max error {e}")
-            next_num = 1
-
-        kode_bahan = (data.get("kode_bahan") or "").lower().strip()
-        # jika kode kosong atau duplicate, pakai next_num
-        if not kode_bahan:
-            kode_bahan = f"{base_prefix}{next_num:03d}"
-        else:
-            # jika kode yang dikirim sudah ada, naikkan
-            try:
-                chk = supabase.table("bahan_inventory").select("id").eq("kode_bahan", kode_bahan).execute()
-                if chk.data:
-                    kode_bahan = f"{base_prefix}{next_num:03d}"
-            except: pass
-
-        payload = {
-            "id": data.get("id") or str(__import__("uuid").uuid4()),
-            "kode_bahan": kode_bahan,
-            "nama_bahan": nama,
-            "kategori_utama": kat,
-            "kode_kategori": sub,
-            "satuan_default": data.get("satuan_default") or data.get("satuan") or "Kg",
-            "stock_qty": stock_qty,
-            "harga_per_satuan": harga,
-            "id_halal": data.get("id_halal"),
-            "updated_at": __import__("datetime").datetime.now().isoformat()
-        }
-        payload = {k:v for k,v in payload.items() if v is not None and v!=""}
-
-        if data.get("id"):
-            # update
-            supabase.table("bahan_inventory").update(payload).eq("id", data.get("id")).execute()
-            return {"ok": True, "id": data.get("id"), "kode_bahan": payload.get("kode_bahan")}
-        else:
-            # insert dengan retry anti duplicate
-            for attempt in range(10):
-                try:
-                    supabase.table("bahan_inventory").insert(payload).execute()
-                    return {"ok": True, "id": payload["id"], "kode_bahan": kode_bahan}
-                except Exception as e:
-                    err = str(e).lower()
-                    if "duplicate" in err or "unique" in err or "kode_bahan" in err:
-                        next_num +=1
-                        kode_bahan = f"{base_prefix}{next_num:03d}"
-                        payload["kode_bahan"]=kode_bahan
-                        payload["id"]=str(__import__("uuid").uuid4())
-                        continue
-                    else:
-                        print(f"insert bahan error {e}")
-                        raise HTTPException(400, str(e))
-            raise HTTPException(400, "Gagal generate kode unik setelah 10x coba")
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        raise HTTPException(500, str(e))
-    except Exception as e:
-        raise HTTPException(500, str(e))
-
-# === API KATEGORI SAVE ===
 
 @app.post("/dashboard/admin/menu/save")
 async def menu_save(request: Request):
