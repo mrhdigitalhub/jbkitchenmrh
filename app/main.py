@@ -548,14 +548,25 @@ async def save_kategori_utama(request: Request):
     code = str(data.get("code","")).lower().strip()
     label = str(data.get("label","")).strip()
     if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
-    try:
-        supabase.table("kategori_bahan").upsert({"code":code,"label":label,"type":"utama"}, on_conflict="code").execute()
-    except:
+    if not label: raise HTTPException(400,"Label wajib")
+    # coba 2 tabel dengan logic insert-or-update (tanpa on_conflict)
+    for tbl in ["kategori_bahan", "kategori_master"]:
         try:
-            supabase.table("kategori_master").upsert({"code":code,"label":label,"type":"utama"}, on_conflict="code").execute()
+            # cek exist
+            chk = supabase.table(tbl).select("id,code").eq("code", code).execute()
+            if chk.data:
+                supabase.table(tbl).update({"label": label, "type": "utama"}).eq("code", code).execute()
+            else:
+                try:
+                    supabase.table(tbl).insert({"code": code, "label": label, "type": "utama"}).execute()
+                except:
+                    # fallback jika butuh id
+                    supabase.table(tbl).insert({"id": str(uuid.uuid4()), "code": code, "label": label, "type": "utama"}).execute()
+            return {"ok": True, "table": tbl}
         except Exception as e:
-            raise HTTPException(500,str(e))
-    return {"ok":True}
+            print(f"[save utama {tbl}] {e}")
+            continue
+    raise HTTPException(500, "Gagal save kategori utama - cek RLS di Supabase. Aktifkan policy INSERT untuk anon atau gunakan service_role key")
 
 @app.post("/api/kategori/sub/save")
 async def save_kategori_sub(request: Request):
@@ -565,14 +576,22 @@ async def save_kategori_sub(request: Request):
     label = str(data.get("label","")).strip()
     parent = str(data.get("parent_code") or data.get("parent") or "").lower().strip()
     if len(code)!=3: raise HTTPException(400,"Code harus 3 huruf")
-    try:
-        supabase.table("kategori_bahan").upsert({"code":code,"label":label,"parent":parent,"parent_code":parent,"type":"sub"}, on_conflict="code").execute()
-    except:
+    if not label or not parent: raise HTTPException(400,"Label & parent wajib")
+    for tbl in ["kategori_bahan", "kategori_master"]:
         try:
-            supabase.table("kategori_master").upsert({"code":code,"label":label,"parent":parent,"parent_code":parent,"type":"sub"}, on_conflict="code").execute()
+            chk = supabase.table(tbl).select("id,code").eq("code", code).execute()
+            if chk.data:
+                supabase.table(tbl).update({"label": label, "parent": parent, "parent_code": parent, "type": "sub"}).eq("code", code).execute()
+            else:
+                try:
+                    supabase.table(tbl).insert({"code": code, "label": label, "parent": parent, "parent_code": parent, "type": "sub"}).execute()
+                except:
+                    supabase.table(tbl).insert({"id": str(uuid.uuid4()), "code": code, "label": label, "parent": parent, "parent_code": parent, "type": "sub"}).execute()
+            return {"ok": True, "table": tbl}
         except Exception as e:
-            raise HTTPException(500,str(e))
-    return {"ok":True}
+            print(f"[save sub {tbl}] {e}")
+            continue
+    raise HTTPException(500, "Gagal save sub - cek RLS policy INSERT di Supabase")
 
 # === API MENU SAVE & DELETE ===
 @app.post("/dashboard/admin/menu/save")
