@@ -78,55 +78,101 @@
 <div id="modalKelola" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"><div class="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto"><div class="p-4 border-b flex justify-between bg-purple-50"><h3 class="font-bold">Kelola Kategori - Delete Terkunci Jika Terpakai</h3><button onclick="closeKelola()" class="text-[20px]">×</button></div><div class="p-4 grid grid-cols-2 gap-6"><div><h4 class="font-semibold text-[13px] mb-2">Utama (code tidak bisa edit jika terpakai)</h4><div id="listUtama" class="border rounded p-2 max-h-[220px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newUtamaCode" maxlength="3" placeholder="code 3 huruf" class="w-20 p-2 border rounded text-[12px]"><input id="newUtamaLabel" placeholder="label baru" class="flex-1 p-2 border rounded text-[12px]"><button onclick="saveUtama()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+ Tambah</button></div></div><div><h4 class="font-semibold text-[13px] mb-2">Sub (code terkunci jika terpakai)</h4><div id="listSub" class="border rounded p-2 max-h-[220px] overflow-y-auto text-[12px]"></div><div class="flex gap-2 mt-2"><input id="newSubCode" maxlength="3" placeholder="code" class="w-16 p-2 border rounded text-[12px]"><input id="newSubLabel" placeholder="label" class="flex-1 p-2 border rounded text-[12px]"><select id="newSubParent" class="w-20 p-2 border rounded text-[12px]"></select><button onclick="saveSub()" class="bg-purple-600 text-white px-3 py-2 rounded text-[12px]">+</button></div></div></div><div class="p-3 bg-yellow-50 border-t text-[11px] text-yellow-800">⚠️ Kategori yang masih dipakai 49 bahan (misal dgi, nbt, lut, tlr, bdr) tidak bisa dihapus. Sistem akan tolak dengan pesan jelas, bukan Internal Server Error lagi.</div></div></div>
 
 <script>
-const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}}; let allRows=[];
+
+const STATE={kategoriUtama:[],kategoriSub:[],kodeCache:{}};
+
 function sf(v){return parseFloat(v)||0;}
+
 async function loadKategori(){
-  try{ const res=await fetch('/api/kategori/list'); const data=await res.json(); STATE.kategoriUtama=data.utama||[]; STATE.kategoriSub=data.sub||[]; }catch(e){ STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'}]; STATE.kategoriSub=[]; }
+  try{
+    const res=await fetch('/api/kategori/list');
+    const data=await res.json();
+    STATE.kategoriUtama=data.utama||[];
+    STATE.kategoriSub=data.sub||[];
+  }catch(e){
+    console.log('kategori list fail', e);
+    STATE.kategoriUtama=[{code:'nbt',label:'Bahan Nabati'},{code:'dgi',label:'Bahan Hewani'}];
+    STATE.kategoriSub=[];
+  }
   try{
     STATE.kodeCache={};
     document.querySelectorAll('.row-bahan').forEach(row=>{
       let kode='';
       row.querySelectorAll('td').forEach(td=>{
         const t=(td.textContent||'').trim().toLowerCase();
-        if(t.match(/^[a-z]+-[a-z]{3}-[a-z]{3}-[0-9]{3}/)){ kode=t; }
+        const m=t.match(/^[a-z]+-[a-z]{3}-[a-z]{3}-[0-9]{3}/);
+        if(m) kode=m[0];
       });
       if(!kode) return;
       const p=kode.split('-');
-      const kat=p[p.length-3];
-      const sub=p[p.length-2];
-      const num=parseInt(p[p.length-1])||0;
-      const key=kat+'-'+sub;
-      STATE.kodeCache[key]=Math.max(STATE.kodeCache[key]||0, num);
+      if(p.length>=4){
+        const kat=p[p.length-3];
+        const sub=p[p.length-2];
+        const num=parseInt(p[p.length-1])||0;
+        const key=kat+'-'+sub;
+        STATE.kodeCache[key]=Math.max(STATE.kodeCache[key]||0, num);
+      }
     });
   }catch(e){}
-  renderKategoriUtama(); renderKelolaLists();
+  renderKategoriUtama();
+  renderKelolaLists();
 }
 
 function renderKategoriUtama(){
-  const sel=document.getElementById('fkat_utama'); if(!sel) return;
-  sel.innerHTML='<option value="">Pilih Utama...</option>'+STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.label} (${k.code})</option>`).join('');
-  const pSel=document.getElementById('newSubParent'); if(pSel) pSel.innerHTML=STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.code}</option>`).join('');
+  const sel=document.getElementById('fkat_utama');
+  if(sel){
+    sel.innerHTML='<option value="">Pilih Utama...</option>'+STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.label} (${k.code})</option>`).join('');
+  }
+  const pSel=document.getElementById('newSubParent');
+  if(pSel){
+    pSel.innerHTML=STATE.kategoriUtama.map(k=>`<option value="${k.code}">${k.code} - ${k.label}</option>`).join('');
+  }
   filterSubKategori();
 }
+
 function filterSubKategori(){
   const utama=document.getElementById('fkat_utama')?.value;
   const subSel=document.getElementById('fkode_kat');
   if(!subSel) return;
-  if(!utama){ subSel.innerHTML='<option value="">-- Pilih Sub --</option>'; return; }
-  const filtered=STATE.kategoriSub.filter(s=>s.parent===utama || s.parent_code===utama);
+  if(!utama){
+    subSel.innerHTML='<option value="">-- Pilih Sub --</option>';
+    genKode();
+    return;
+  }
+  const filtered=STATE.kategoriSub.filter(s=> (s.parent===utama) || (s.parent_code===utama) );
   subSel.innerHTML='<option value="">-- Pilih Sub --</option>'+filtered.map(s=>`<option value="${s.code}">${s.label} (${s.code})</option>`).join('');
   genKode();
 }
+
 function genKode(){
   const flag=(document.getElementById('fhall')?.value||'Hall');
-  const kat=document.getElementById('fkat_utama')?.value||'nbt';
-  const sub=document.getElementById('fkode_kat')?.value||'rmp';
+  const kat=(document.getElementById('fkat_utama')?.value||'nbt');
+  const sub=(document.getElementById('fkode_kat')?.value||'rmp');
   if(!kat || !sub) return;
   const key=kat+'-'+sub;
   const next=(STATE.kodeCache[key]||0)+1;
   const kode=`${flag}-${kat}-${sub}-${String(next).padStart(3,'0')}`.toLowerCase();
   const inp=document.getElementById('fkode_auto');
   if(inp) inp.value=kode;
+}
+
+function renderKelolaLists(){
+  const utamaDiv=document.getElementById('listUtama');
+  if(utamaDiv){
+    if(STATE.kategoriUtama.length===0){
+      utamaDiv.innerHTML='<div class="p-2 text-gray-400">Belum ada kategori - loading...</div>';
+    } else {
+      utamaDiv.innerHTML=STATE.kategoriUtama.map(u=>`<div class="flex justify-between border-b py-1 px-1"><span>${u.code} - ${u.label}</span><button onclick="deleteUtama('${u.code}')" class="text-red-500 text-[11px] px-2">X</button></div>`).join('');
+    }
+  }
+  const subDiv=document.getElementById('listSub');
+  if(subDiv){
+    if(STATE.kategoriSub.length===0){
+      subDiv.innerHTML='<div class="p-2 text-gray-400">Belum ada sub - loading...</div>';
+    } else {
+      subDiv.innerHTML=STATE.kategoriSub.map(s=>`<div class="flex justify-between border-b py-1 px-1"><span>${s.code} - ${s.label} (${s.parent||s.parent_code||''})</span><button onclick="deleteSub('${s.code}')" class="text-red-500 text-[11px] px-2">X</button></div>`).join('');
+    }
+  }
 }
 
 async function saveUtama(){
@@ -169,8 +215,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   allRows=Array.from(document.querySelectorAll('.row-bahan'));
   loadKategori(); initSearch();
   document.getElementById('fkat_utama')?.addEventListener('change', filterSubKategori);
-  document.getElementById('fhall')?.addEventListener('change', genKode);
-  document.getElementById('fkode_kat')?.addEventListener('change', genKode);
   document.getElementById('fkode_kat')?.addEventListener('change', genKode);
   document.getElementById('fhall')?.addEventListener('change', genKode);
   document.getElementById('btnAdd')?.addEventListener('click', openModal);
